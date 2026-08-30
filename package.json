@@ -23,9 +23,11 @@
   "homepage": "https://github.com/Igidn/The-Agent#readme",
   "devDependencies": {
     "@types/node": "^26.4.0",
+    "@types/ws": "^8.18.1",
     "typescript": "^7.0.2"
   },
   "dependencies": {
-    "@earendil-works/pi-coding-agent": "^0.84.4"
+    "@earendil-works/pi-coding-agent": "^0.84.4",
+    "ws": "^8.21.3"
   }
 }
