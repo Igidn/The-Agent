@@ -2,3 +2,4 @@ export { loadConfig, type DaemonConfig, type ThinkingLevel } from "./config/inde
 export { wrapMessage, parseSurfaceFromOrigin, type SurfaceId, type WrappedMessage } from "./core/wrapper.js";
 export { SessionManager, type EventBus } from "./core/session.js";
 export { MessageQueue, type QueueState, type QueueStatus, type SurfaceQueueInfo } from "./core/queue.js";
+export { Charter } from "./core/charter.js";
