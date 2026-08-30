@@ -6,8 +6,6 @@ import { SessionManager, type EventBus } from "../core/session.js";
 import type { SurfaceId } from "../core/wrapper.js";
 import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 
-// ─── WebSocket implementation (RFC 6455) ──────────────────────────────────
-
 const WS_GUID = "258EAFA5-E914-47DA-95CA-5AB5DC19B6B9";
 const OP_TEXT = 0x01;
 const OP_CLOSE = 0x08;
@@ -88,8 +86,6 @@ function computeAcceptKey(key: string): string {
     .digest("base64");
 }
 
-// ─── Gateway ──────────────────────────────────────────────────────────────
-
 /** A connected WebSocket client with its event subscription. */
 interface WsClient {
   ws: WebSocketConnection;
@@ -159,8 +155,6 @@ export class Gateway {
       });
     }
   }
-
-  // ── HTTP request handling ─────────────────────────────────────────────
 
   private _handleRequest(
     req: IncomingMessage,
@@ -254,8 +248,6 @@ export class Gateway {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify(status));
   }
-
-  // ── WebSocket upgrade handling ────────────────────────────────────────
 
   private _handleUpgrade(
     req: IncomingMessage,
@@ -411,8 +403,6 @@ export class Gateway {
       }
     });
   }
-
-  // ── Helpers ───────────────────────────────────────────────────────────
 
   private _setCorsHeaders(res: ServerResponse): void {
     res.setHeader("Access-Control-Allow-Origin", "*");
