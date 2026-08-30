@@ -112,7 +112,6 @@ export class SessionManager {
     }
   }
 
-  // ── Passthrough methods ────────────────────────────────────────────
 
   prompt(text: string, options?: PromptOptions): Promise<void> {
     return this.session.prompt(text, options);
@@ -126,7 +125,6 @@ export class SessionManager {
     return this.session.followUp(text);
   }
 
-  // ── Internal helpers ───────────────────────────────────────────────
 
   /**
    * Resolve the model from config or fall back to the first available

@@ -2,8 +2,6 @@ import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 import { SessionManager } from "./session.js";
 import { type SurfaceId, wrapMessage } from "./wrapper.js";
 
-// ── Exported types ──────────────────────────────────────────────────
-
 export type QueueState = "idle" | "streaming";
 
 export interface SurfaceQueueInfo {
@@ -20,7 +18,6 @@ export interface QueueStatus {
   surfaces: Record<SurfaceId, SurfaceQueueInfo>;
 }
 
-// ── Internal helpers ────────────────────────────────────────────────
 
 const ALL_SURFACES: SurfaceId[] = ["discord", "launcher", "dashboard", "cli"];
 
@@ -39,7 +36,6 @@ function emptyStatus(state: QueueState): QueueStatus {
   return { state, surfaces };
 }
 
-// ── Debounce state ──────────────────────────────────────────────────
 
 interface DebounceState {
   timer: ReturnType<typeof setTimeout>;
@@ -47,7 +43,6 @@ interface DebounceState {
   surface: SurfaceId;
 }
 
-// ── Queued message ──────────────────────────────────────────────────
 
 interface QueuedMessage {
   text: string;
@@ -55,7 +50,6 @@ interface QueuedMessage {
   timestamp: number;
 }
 
-// ── MessageQueue ────────────────────────────────────────────────────
 
 /**
  * Owns the inbound message queue for the single session.
@@ -89,7 +83,6 @@ export class MessageQueue {
   /** Whether the session is known to be idle. Default true until first message. */
   private settled = true;
 
-  // ── Config ────────────────────────────────────────────────────────
 
   /**
    * Debounce window in milliseconds.
@@ -111,7 +104,6 @@ export class MessageQueue {
     );
   }
 
-  // ── Public API ────────────────────────────────────────────────────
 
   /**
    * Enqueue a message from a surface.
@@ -124,7 +116,6 @@ export class MessageQueue {
     const trimmed = text.trim();
     if (!trimmed) return;
 
-    // ── Debounce path ──────────────────────────────────────────────
     const existing = this.debounceStates.get(surface);
     if (existing) {
       clearTimeout(existing.timer);
@@ -136,7 +127,7 @@ export class MessageQueue {
       return;
     }
 
-    // ── Decide whether to start a new debounce window ──────────────
+
     const currentlyStreaming = !this.settled;
 
     if (currentlyStreaming && this.activeSurface !== null && surface !== this.activeSurface) {
@@ -191,7 +182,6 @@ export class MessageQueue {
     this.settled = true;
   }
 
-  // ── Internal: debounce ────────────────────────────────────────────
 
   private _startDebounce(surface: SurfaceId, text: string): void {
     const state: DebounceState = {
@@ -214,7 +204,6 @@ export class MessageQueue {
     this._dispatch(combined, state.surface);
   }
 
-  // ── Internal: pending queue ───────────────────────────────────────
 
   private _enqueuePending(text: string, surface: SurfaceId): void {
     this.pendingQueue.push({ text, surface, timestamp: Date.now() });
@@ -248,7 +237,6 @@ export class MessageQueue {
     }
   }
 
-  // ── Internal: dispatch ────────────────────────────────────────────
 
   /**
    * Core dispatch: apply the three-rule decision and call into the
@@ -277,7 +265,6 @@ export class MessageQueue {
     // else: streaming but no active surface set → treat as idle (shouldn't happen).
   }
 
-  // ── Internal: session events ──────────────────────────────────────
 
   private _onSessionEvent(event: AgentSessionEvent): void {
     if (event.type === "agent_settled") {

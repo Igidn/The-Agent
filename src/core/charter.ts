@@ -85,7 +85,6 @@ export class Charter {
     }
   }
 
-  // ── Private ──────────────────────────────────────────────────────
 
   private async _runWatcher(
     dir: string,

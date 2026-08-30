@@ -6,7 +6,7 @@ Rule:
 - Do not write a function with less than 25 lines.
 - Do not commit implementation plan or research notes. Keep working materials outside the worktree (eg. .docs/).
 - Do not use 'any' type.
-- Do not use retarded separation comments.
+- Do not use section-separator comments (e.g. `// ── Section ──...`, `// --- feature ---`, `// ===== SECTION =====`). File structure from code alone.
 - Use Conventional commit titles.
 - Comments describe how a thing is used, Do not annotate every line of behavior.
 
