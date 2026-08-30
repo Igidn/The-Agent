@@ -128,7 +128,7 @@ export class Gateway {
     res: ServerResponse,
   ): Promise<void> {
     const body = await this._readBody(req);
-    let parsed: { text?: string; surface?: string };
+    let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(body);
     } catch {
@@ -136,13 +136,18 @@ export class Gateway {
       return;
     }
 
-    const text = parsed.text?.trim();
-    if (!text) {
-      this._jsonError(res, 400, "Field 'text' is required and must be non-empty");
+    if (typeof parsed.text !== "string" || !parsed.text.trim()) {
+      this._jsonError(res, 400, "Field 'text' is required and must be a non-empty string");
       return;
     }
+    const text: string = parsed.text.trim();
 
-    const surfaceRaw = parsed.surface?.trim() ?? "dashboard";
+    let surfaceRaw: string;
+    if (typeof parsed.surface === "string") {
+      surfaceRaw = parsed.surface.trim() || "dashboard";
+    } else {
+      surfaceRaw = "dashboard";
+    }
     const surface = this._normalizeSurface(surfaceRaw);
 
     const messageId = randomUUID();
