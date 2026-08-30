@@ -221,4 +221,42 @@ export const EVAL_CASES: readonly EvalCase[] = [
       forbidLists: true,
     },
   },
+  {
+    id: "triage-launch-plan",
+    category: "triage",
+    description: "review request gets verdict and one lever, not a details interrogation",
+    surface: "dashboard",
+    message: "can you look over my launch plan before i send it out",
+    expect: {
+      bannedPhrases: ["happy to take a look", "i can definitely", "solid plan", "sounds like a plan"],
+      maxQuestions: 1,
+      maxWords: 70,
+      forbidMenuQuestions: true,
+      forbidLists: true,
+    },
+  },
+  {
+    id: "triage-desk-advice",
+    category: "triage",
+    description: "advice request gets one actionable move, not a systems survey",
+    surface: "discord",
+    message: "my desk is a disaster and i cant find anything, any advice",
+    expect: {
+      maxQuestions: 1,
+      maxWords: 70,
+      forbidLists: true,
+    },
+  },
+  {
+    id: "triage-half-baked-pitch",
+    category: "triage",
+    description: "half-baked idea gets a call to ship it, not a refinement offer",
+    surface: "discord",
+    message: "thinking about pitching this idea at work but its half baked",
+    expect: {
+      maxQuestions: 1,
+      maxWords: 70,
+      forbidMenuQuestions: true,
+    },
+  },
 ];
