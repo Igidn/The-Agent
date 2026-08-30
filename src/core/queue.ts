@@ -95,8 +95,13 @@ export class MessageQueue {
     debounceWindowMs = 5_000,
   ) {
     this.debounceWindowMs = debounceWindowMs;
+  }
 
-    // Subscribe to session lifecycle events so we know when it settles.
+  /**
+   * Wire up session event subscription. Call after SessionManager.start().
+   */
+  start(): void {
+    if (this.unsubEvent) return;
     this.unsubEvent = this.sessionManager.session.subscribe(
       (event: AgentSessionEvent) => {
         this._onSessionEvent(event);

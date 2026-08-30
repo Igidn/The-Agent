@@ -1,7 +1,11 @@
+import { homedir } from "node:os";
+import { join } from "node:path";
+
 import type { DaemonConfig } from "../config/index.js";
 import {
   createAgentSession,
   createEventBus,
+  DefaultResourceLoader,
   ModelRuntime,
   SessionManager as SdkSessionManager,
 } from "@earendil-works/pi-coding-agent";
@@ -10,6 +14,9 @@ import type {
   AgentSessionEvent,
   PromptOptions,
 } from "@earendil-works/pi-coding-agent";
+import { Charter } from "./charter.js";
+
+const DEFAULT_AGENT_DIR = join(homedir(), ".pi", "agent");
 
 /** Typed event bus wrapper for session events. */
 export type EventBus<T> = {
@@ -39,7 +46,7 @@ export class SessionManager {
   private _sessionManager!: SdkSessionManager;
   private _disposed = false;
 
-  constructor() {
+  constructor(private charter: Charter) {
     this.onEvent = createEventBus() as unknown as EventBus<AgentSessionEvent>;
   }
 
@@ -70,10 +77,17 @@ export class SessionManager {
 
     this._sessionManager = SdkSessionManager.continueRecent(cwd);
 
+    const resourceLoader = new DefaultResourceLoader({
+      cwd,
+      agentDir: DEFAULT_AGENT_DIR,
+      systemPrompt: this.charter.systemPrompt || undefined,
+    });
+
     const result = await createAgentSession({
       model: resolvedModel,
       modelRuntime: this.modelRuntime,
       sessionManager: this._sessionManager,
+      resourceLoader,
       cwd,
       tools: ["read", "bash", "edit", "write"],
     });
