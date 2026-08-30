@@ -12,6 +12,7 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 .docs
 .pi
+.eval
 
 # Runtime data
 pids
