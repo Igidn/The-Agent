@@ -102,6 +102,25 @@ export function runChecks(reply: string, expect: CaseExpectation): CheckResult[]
     });
   }
 
+  if (expect.maxQuestions !== undefined) {
+    const questionCount = (text.match(/\?/g) ?? []).length;
+    results.push({
+      name: "max-questions",
+      pass: questionCount <= expect.maxQuestions,
+      detail: questionCount <= expect.maxQuestions ? "" : `${questionCount} questions, limit ${expect.maxQuestions}`,
+    });
+  }
+
+  if (expect.forbidMenuQuestions === true) {
+    const questionSegments = text.match(/[^.!\n]*\?/g) ?? [];
+    const menus = questionSegments.filter((q) => /,/.test(q) && /\bor\b/i.test(q));
+    results.push({
+      name: "no-menu-questions",
+      pass: menus.length === 0,
+      detail: menus.length === 0 ? "" : `offering options inside a question: ${menus.map((m) => m.trim()).join(" | ")}`,
+    });
+  }
+
   if (expect.forbidLists === true) {
     const listLines = text.match(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S/gm) ?? [];
     results.push({

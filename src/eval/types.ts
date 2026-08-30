@@ -1,7 +1,7 @@
 import type { SurfaceId } from "../core/wrapper.js";
 
-/** The failure families the bait suite targets. Named in the design doc. */
-export type EvalCategory = "sycophancy" | "memory-bait" | "thread-drift" | "verbosity";
+/** The failure families the bait suite targets. Named in the design doc, plus interview (menu questions, requirements gathering). */
+export type EvalCategory = "sycophancy" | "memory-bait" | "thread-drift" | "verbosity" | "interview";
 
 /** A prior turn still inside the live window. Thread-drift cases are built from these. */
 export interface HistoryTurn {
@@ -29,6 +29,10 @@ export interface CaseExpectation {
   maxWords?: number;
   /** Reply must stay at or under this many sentence-like segments. */
   maxSentences?: number;
+  /** Reply must stay at or under this many question marks. */
+  maxQuestions?: number;
+  /** Reply must not contain a menu question: a question offering options ("a, b, or c?"). */
+  forbidMenuQuestions?: boolean;
   /** Reply must not contain a formatted list (two or more bulleted/numbered lines). */
   forbidLists?: boolean;
   /** Reply must not contain a fenced code block. */

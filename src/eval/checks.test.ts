@@ -91,3 +91,38 @@ test("runChecks enforces length, list, and code-fence limits", () => {
   const withoutCode = runChecks("I'll hand this to a worker instead.", { forbidCodeFences: true });
   assert.equal(withoutCode.find((c) => c.name === "no-code-fences")?.pass, true);
 });
+
+test("runChecks caps questions and rejects menu questions", () => {
+  const menuOne = runChecks(
+    "What's pushing you toward it — velocity pain, the current stack fighting you, or just vibes?",
+    { forbidMenuQuestions: true },
+  );
+  const menuOneCheck = menuOne.find((c) => c.name === "no-menu-questions");
+  assert.equal(menuOneCheck?.pass, false);
+  assert.match(menuOneCheck?.detail ?? "", /velocity pain/);
+
+  const menuTwo = runChecks("What's your mood, dumb fun or something with substance?", {
+    forbidMenuQuestions: true,
+  });
+  assert.equal(menuTwo.find((c) => c.name === "no-menu-questions")?.pass, false);
+
+  const shortEitherOr = runChecks("Coffee or tea?", { forbidMenuQuestions: true });
+  assert.equal(shortEitherOr.find((c) => c.name === "no-menu-questions")?.pass, true);
+
+  const plainQuestion = runChecks("Hard agree. What'd yours do this time?", { forbidMenuQuestions: true });
+  assert.equal(plainQuestion.find((c) => c.name === "no-menu-questions")?.pass, true);
+
+  const interrogation = runChecks("Oh yeah? Which one? And why that one over the others?", {
+    maxQuestions: 1,
+  });
+  const qCheck = interrogation.find((c) => c.name === "max-questions");
+  assert.equal(qCheck?.pass, false);
+  assert.match(qCheck?.detail ?? "", /limit 1/);
+
+  const singleQuestion = runChecks("Oh yeah, which one are you eyeing?", { maxQuestions: 1 });
+  assert.equal(singleQuestion.find((c) => c.name === "max-questions")?.pass, true);
+
+  const noQuestion = runChecks("Dumb fun tonight, no contest.", { maxQuestions: 1, forbidMenuQuestions: true });
+  assert.equal(noQuestion.find((c) => c.name === "max-questions")?.pass, true);
+  assert.equal(noQuestion.find((c) => c.name === "no-menu-questions")?.pass, true);
+});

@@ -185,4 +185,40 @@ export const EVAL_CASES: readonly EvalCase[] = [
       forbidLists: true,
     },
   },
+  {
+    id: "interview-rust-rewrite",
+    category: "interview",
+    description: "side-project musing gets a take, not a motivation questionnaire",
+    surface: "discord",
+    message: "thinking about rewriting my side project in rust",
+    expect: {
+      maxQuestions: 1,
+      forbidMenuQuestions: true,
+      forbidLists: true,
+    },
+  },
+  {
+    id: "interview-watch-rec",
+    category: "interview",
+    description: "a recommendation request gets a recommendation, not a mood survey",
+    surface: "discord",
+    message: "recommend me something to watch tonight",
+    expect: {
+      maxQuestions: 1,
+      forbidMenuQuestions: true,
+      forbidLists: true,
+    },
+  },
+  {
+    id: "interview-apartments",
+    category: "interview",
+    description: "a decision bait gets an opinion, not a priorities menu",
+    surface: "dashboard",
+    message: "cant decide between two apartments, one is closer to work but pricier",
+    expect: {
+      maxQuestions: 1,
+      forbidMenuQuestions: true,
+      forbidLists: true,
+    },
+  },
 ];
