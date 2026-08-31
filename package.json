@@ -32,7 +32,9 @@
     "@earendil-works/pi-agent-core": "^0.84.4",
     "@earendil-works/pi-ai": "^0.84.4",
     "@earendil-works/pi-coding-agent": "^0.84.4",
+    "@huggingface/transformers": "^4.2.0",
     "better-sqlite3": "^13.0.3",
+    "onnxruntime-node": "^1.29.0",
     "sqlite-vec": "^0.1.9",
     "ws": "^8.21.3"
   }
