@@ -27,35 +27,6 @@ Flags:
   --concurrency <n>       Cases in flight at once. Default: 4.`;
 
 /**
- * Load KEY=VALUE pairs from .env into process.env when not already set, so
- * `node dist/eval/main.js` works the same as the npm script (which passes
- * --env-file-if-exists). A missing or malformed .env is not an error here:
- * the key may legitimately come from the real environment.
- */
-function loadDotEnv(path: string): void {
-  let raw: string;
-  try {
-    raw = readFileSync(path, "utf-8");
-  } catch {
-    return;
-  }
-
-  for (const line of raw.split("\n")) {
-    const trimmed = line.trim();
-    if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
-
-    const eq = trimmed.indexOf("=");
-    if (eq < 1) continue;
-
-    const key = trimmed.slice(0, eq).trim();
-    const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
-    if (process.env[key] === undefined) {
-      process.env[key] = value;
-    }
-  }
-}
-
-/**
  * CLI entry for the eval harness. Returns the process exit code: 0 when
  * every case passed, 1 on eval failures, 2 when the run could not start
  * (bad flags, missing key, unresolvable model, empty persona).
@@ -86,11 +57,36 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
     i++;
   }
 
-  loadDotEnv(resolve(process.cwd(), ".env"));
+  {
+    const envPath = resolve(process.cwd(), ".env");
+    let raw: string;
+    try {
+      raw = readFileSync(envPath, "utf-8");
+      for (const line of raw.split("\n")) {
+        const trimmed = line.trim();
+        if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
+        const eq = trimmed.indexOf("=");
+        if (eq < 1) continue;
+        const key = trimmed.slice(0, eq).trim();
+        const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+        if (process.env[key] === undefined) {
+          process.env[key] = value;
+        }
+      }
+    } catch {
+      // missing .env is fine
+    }
+  }
 
   const config = loadConfig();
-  const modelSpec: EvalModelSpec = flags.has("--model")
-    ? splitModelFlag(flags.get("--model")!)
+  const modelSpec: EvalModelSpec = flags.has("--model") ? (() => {
+    const value = flags.get("--model")!;
+    const slash = value.indexOf("/");
+    if (slash < 1 || slash === value.length - 1) {
+      throw new Error(`--model expects <provider/id>, got "${value}"`);
+    }
+    return { provider: value.slice(0, slash), id: value.slice(slash + 1) };
+  })()
     : config.model !== undefined
       ? { provider: config.model.provider, id: config.model.id }
       : DEFAULT_EVAL_MODEL;
@@ -150,14 +146,6 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
   console.log(`Transcripts written to ${runDir}`);
 
   return run.results.every((r) => r.passed) ? 0 : 1;
-}
-
-function splitModelFlag(value: string): EvalModelSpec {
-  const slash = value.indexOf("/");
-  if (slash < 1 || slash === value.length - 1) {
-    throw new Error(`--model expects <provider/id>, got "${value}"`);
-  }
-  return { provider: value.slice(0, slash), id: value.slice(slash + 1) };
 }
 
 const isEntryPoint = process.argv[1] !== undefined

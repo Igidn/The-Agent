@@ -1,6 +1,5 @@
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config/index.js";
-import type { DaemonConfig } from "./shared/types.js";
 import { Charter } from "./core/charter.js";
 import { SessionManager } from "./core/session.js";
 import { MessageQueue } from "./core/queue.js";
@@ -19,7 +18,22 @@ export async function main(): Promise<void> {
   const config = loadConfig();
 
   // 2. Startup banner
-  printBanner(config);
+  {
+    const model = config.model
+      ? `${config.model.provider}/${config.model.id}`
+      : "auto (first available)";
+    const lines = [
+      "",
+      "  ┌────────────────────────────────────────────┐",
+      `  │  The Agent daemon                           │`,
+      `  │  gateway  http://${config.host}:${config.port}           │`,
+      `  │  model    ${model.padEnd(36)}│`,
+      `  │  persona  ${config.personaDir.padEnd(36)}│`,
+      "  └────────────────────────────────────────────┘",
+      "",
+    ];
+    console.log(lines.join("\n"));
+  }
 
   // 3. Charter (persona)
   const charter = new Charter(config.personaDir);
@@ -67,24 +81,6 @@ export async function main(): Promise<void> {
 
   // Keep alive
   console.log("Daemon: ready");
-}
-
-function printBanner(config: DaemonConfig): void {
-  const model = config.model
-    ? `${config.model.provider}/${config.model.id}`
-    : "auto (first available)";
-
-  const lines = [
-    "",
-    "  ┌────────────────────────────────────────────┐",
-    `  │  The Agent daemon                           │`,
-    `  │  gateway  http://${config.host}:${config.port}           │`,
-    `  │  model    ${model.padEnd(36)}│`,
-    `  │  persona  ${config.personaDir.padEnd(36)}│`,
-    "  └────────────────────────────────────────────┘",
-    "",
-  ];
-  console.log(lines.join("\n"));
 }
 
 const isEntryPoint = process.argv[1]

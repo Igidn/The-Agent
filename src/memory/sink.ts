@@ -79,7 +79,15 @@ export function chunkSummary(
     // Look backward from the target for a sentence boundary
     // Split on . ! ? followed by space or newline (non-greedy)
     const segment = text.slice(start, searchEnd);
-    const lastBoundary = findSentenceBoundary(segment);
+    let lastBoundary = -1;
+    for (let i = segment.length - 1; i >= 0; i--) {
+      if (/[.!?]/.test(segment[i])) {
+        if (i + 1 >= segment.length || /\s/.test(segment[i + 1])) {
+          lastBoundary = i + 1;
+          break;
+        }
+      }
+    }
 
     if (lastBoundary > 0) {
       chunks.push(segment.slice(0, lastBoundary).trim());
@@ -104,23 +112,6 @@ export function chunkSummary(
   }
 
   return chunks.filter((c) => c.length > 0);
-}
-
-/**
- * Find the last sentence-ending punctuation position in the string.
- * Returns the index _after_ the punctuation (so the punctuation is
- * included in the chunk).
- */
-function findSentenceBoundary(text: string): number {
-  for (let i = text.length - 1; i >= 0; i--) {
-    if (/[.!?]/.test(text[i])) {
-      // Must be followed by whitespace or be at end-of-string
-      if (i + 1 >= text.length || /\s/.test(text[i + 1])) {
-        return i + 1;
-      }
-    }
-  }
-  return -1;
 }
 
 // ---------------------------------------------------------------------------

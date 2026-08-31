@@ -25,17 +25,6 @@ function buildQuery(message: string, prevAssistantTurn: string | null): string {
 }
 
 /**
- * Compute recency factor from an ISO 8601 timestamp.
- *
- * Decays linearly from 1.0 (updated just now) to 0.0 (older than 30 days).
- */
-function recencyFactor(updatedAt: string): number {
-  const ageMs = Date.now() - new Date(updatedAt).getTime();
-  const ageDays = ageMs / 86_400_000;
-  return Math.max(0, 1 - ageDays / 30);
-}
-
-/**
  * Rough token count: chars / 4, matching the heuristic the SDK uses.
  */
 function estimateTokens(text: string): number {
@@ -58,32 +47,10 @@ function hasEntityOverlap(queryText: string, item: { entities?: string[] }): boo
   return item.entities.some((entity) => {
     const lower = entity.toLowerCase();
     // Check word boundary: entity must appear as a whole word in the query.
-    const regex = new RegExp(`\\b${escapeRegex(lower)}\\b`);
+    const escaped = lower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const regex = new RegExp(`\\b${escaped}\\b`);
     return regex.test(lowerQuery);
   });
-}
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * Re-score a candidate by combining cosine similarity, recency, and
- * importance with fixed weights (design's suggested blend).
- *
- *   score = cosine * 0.5 + recency * 0.25 + importance * 0.25
- */
-function computeScore(
-  cosine: number,
-  updatedAt: string,
-  importance: number,
-): number {
-  const normalizedImportance = Math.min(importance / 10, 1);
-  return (
-    cosine * 0.5 +
-    recencyFactor(updatedAt) * 0.25 +
-    normalizedImportance * 0.25
-  );
 }
 
 /**
@@ -154,7 +121,13 @@ export async function prefetch(
     .map((r) => ({
       item: r.item,
       cosine: r.cosine,
-      score: computeScore(r.cosine, r.item.updatedAt, r.item.importance),
+      score: (() => {
+        const normalizedImportance = Math.min(r.item.importance / 10, 1);
+        const ageMs = Date.now() - new Date(r.item.updatedAt).getTime();
+        const ageDays = ageMs / 86_400_000;
+        const recency = Math.max(0, 1 - ageDays / 30);
+        return r.cosine * 0.5 + recency * 0.25 + normalizedImportance * 0.25;
+      })()
     }))
     .filter((r) => r.score >= cfg.scoreThreshold);
 

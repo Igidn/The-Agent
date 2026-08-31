@@ -21,22 +21,6 @@ export interface QueueStatus {
 
 const ALL_SURFACES: SurfaceId[] = ["discord", "launcher", "dashboard", "cli"];
 
-/**
- * Return a QueueStatus shell with every surface set to zero pending and
- * no debouncing. Used as the starting point for getStatus().
- */
-function emptyStatus(state: QueueState): QueueStatus {
-  const surfaces: Record<SurfaceId, SurfaceQueueInfo> = {} as Record<
-    SurfaceId,
-    SurfaceQueueInfo
-  >;
-  for (const s of ALL_SURFACES) {
-    surfaces[s] = { pending: 0 };
-  }
-  return { state, surfaces };
-}
-
-
 interface DebounceState {
   timer: ReturnType<typeof setTimeout>;
   texts: string[];
@@ -157,7 +141,11 @@ export class MessageQueue {
    */
   getStatus(): QueueStatus {
     const state: QueueState = this.settled ? "idle" : "streaming";
-    const status = emptyStatus(state);
+    const surfaces: Record<SurfaceId, SurfaceQueueInfo> = {} as Record<SurfaceId, SurfaceQueueInfo>;
+    for (const s of ALL_SURFACES) {
+      surfaces[s] = { pending: 0 };
+    }
+    const status: QueueStatus = { state, surfaces };
 
     for (const [surface, count] of this.pendingCounts) {
       status.surfaces[surface].pending = count;
