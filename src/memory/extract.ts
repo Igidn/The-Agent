@@ -17,10 +17,6 @@ import type {
   ScoredItem,
 } from "./types.js";
 
-// ---------------------------------------------------------------------------
-// extractFacts
-// ---------------------------------------------------------------------------
-
 /**
  * System prompt for the fact-extraction pass.
  *
@@ -173,10 +169,6 @@ function parseTags(raw: unknown): MemoryTag[] {
   );
 }
 
-// ---------------------------------------------------------------------------
-// decideUpsert
-// ---------------------------------------------------------------------------
-
 /**
  * System prompt for the ADD/UPDATE/DELETE/NOOP decision.
  *
@@ -290,10 +282,6 @@ function parseDecision(text: string): ExtractionDecision {
     return { action: "ADD" };
   }
 }
-
-// ---------------------------------------------------------------------------
-// ingestFact
-// ---------------------------------------------------------------------------
 
 /**
  * Write an extracted fact into the store with deduplication.

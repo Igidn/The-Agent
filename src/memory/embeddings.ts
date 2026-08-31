@@ -2,10 +2,9 @@ import { pipeline } from "@huggingface/transformers";
 import type { MemoryConfig } from "../shared/types.js";
 import type { EmbeddingProvider } from "./types.js";
 
-// ---------------------------------------------------------------------------
-// Local embedding: transformers.js + ONNX, in-process
-// ---------------------------------------------------------------------------
-
+/**
+ * Local embedding via transformers.js + ONNX, running in-process.
+ */
 export class LocalEmbeddingProvider implements EmbeddingProvider {
   readonly dims: number;
   #extract:
@@ -39,10 +38,9 @@ export class LocalEmbeddingProvider implements EmbeddingProvider {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Sidecar embedding: HTTP POST against a Python daemon (not built yet)
-// ---------------------------------------------------------------------------
-
+/**
+ * Sidecar embedding via HTTP POST against a Python daemon.
+ */
 export class SidecarEmbeddingProvider implements EmbeddingProvider {
   readonly dims: number;
 
@@ -71,10 +69,9 @@ export class SidecarEmbeddingProvider implements EmbeddingProvider {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Factory
-// ---------------------------------------------------------------------------
-
+/**
+ * Factory: create the embedding provider from config.
+ */
 export function createEmbeddingProvider(cfg: MemoryConfig): EmbeddingProvider {
   if (cfg.embedding.provider === "sidecar") {
     if (!cfg.embedding.sidecarUrl) {

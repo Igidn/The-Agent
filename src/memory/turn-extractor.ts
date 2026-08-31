@@ -8,10 +8,6 @@ import type { Api, Model, Models } from "@earendil-works/pi-ai";
 import type { ExtractedFact, MemoryStore } from "./types.js";
 import { ingestFact } from "./extract.js";
 
-// ---------------------------------------------------------------------------
-// ExtractFactsFn
-// ---------------------------------------------------------------------------
-
 /**
  * Signature that the turn extractor accepts for fact extraction.
  *
@@ -24,10 +20,6 @@ export type ExtractFactsFn = (
   models: Models,
   signal?: AbortSignal,
 ) => Promise<ExtractedFact[]>;
-
-// ---------------------------------------------------------------------------
-// TurnExtractor
-// ---------------------------------------------------------------------------
 
 /**
  * Per-turn fact extraction trigger.
@@ -94,10 +86,6 @@ export class TurnExtractor {
     this._unsub = null;
     this._session = null;
   }
-
-  // ------------------------------------------------------------------
-  // Internal
-  // ------------------------------------------------------------------
 
   /**
    * React to a settled agent turn.
