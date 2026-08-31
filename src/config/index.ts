@@ -136,24 +136,57 @@ export function loadConfig(): DaemonConfig {
     0.5,
   );
 
-  let memory: DaemonConfig["memory"] = undefined;
-  if (memoryEmbeddingDims >= 1) {
-    memory = {
-      dbPath: memoryDbPath,
-      embeddingModel: memoryEmbeddingModel,
-      embeddingDims: memoryEmbeddingDims,
-      embedding: {
-        provider: memoryEmbeddingProvider,
-        ...(memorySidecarUrl ? { sidecarUrl: memorySidecarUrl } : {}),
-      },
-      prefetch: {
-        topK: memoryPrefetchTopK,
-        maxTokens: memoryPrefetchMaxTokens,
-        strictCosine: memoryPrefetchStrictCosine,
-        scoreThreshold: memoryPrefetchScoreThreshold,
-      },
-    };
+  if (
+    !Number.isInteger(memoryEmbeddingDims) ||
+    memoryEmbeddingDims < 1
+  ) {
+    throw new Error(
+      `MEMORY_EMBEDDING_DIMS must be a positive integer, got ${memoryEmbeddingDims}`,
+    );
   }
+  if (memoryEmbeddingProvider === "sidecar" && memorySidecarUrl === undefined) {
+    throw new Error(
+      "MEMORY_SIDECAR_URL is required when MEMORY_EMBEDDING_PROVIDER=sidecar",
+    );
+  }
+  if (!Number.isInteger(memoryPrefetchTopK) || memoryPrefetchTopK < 1) {
+    throw new Error(
+      `MEMORY_PREFETCH_TOP_K must be a positive integer, got ${memoryPrefetchTopK}`,
+    );
+  }
+  if (!Number.isInteger(memoryPrefetchMaxTokens) || memoryPrefetchMaxTokens < 1) {
+    throw new Error(
+      `MEMORY_PREFETCH_MAX_TOKENS must be a positive integer, got ${memoryPrefetchMaxTokens}`,
+    );
+  }
+  if (
+    memoryPrefetchStrictCosine < 0 ||
+    memoryPrefetchStrictCosine > 1 ||
+    memoryPrefetchScoreThreshold < 0 ||
+    memoryPrefetchScoreThreshold > 1
+  ) {
+    throw new Error(
+      "MEMORY_PREFETCH_STRICT_COSINE and MEMORY_PREFETCH_SCORE_THRESHOLD " +
+        `must be within [0, 1], got ${memoryPrefetchStrictCosine} / ` +
+        `${memoryPrefetchScoreThreshold}`,
+    );
+  }
+
+  const memory: MemoryConfig = {
+    dbPath: memoryDbPath,
+    embeddingModel: memoryEmbeddingModel,
+    embeddingDims: memoryEmbeddingDims,
+    embedding: {
+      provider: memoryEmbeddingProvider,
+      ...(memorySidecarUrl ? { sidecarUrl: memorySidecarUrl } : {}),
+    },
+    prefetch: {
+      topK: memoryPrefetchTopK,
+      maxTokens: memoryPrefetchMaxTokens,
+      strictCosine: memoryPrefetchStrictCosine,
+      scoreThreshold: memoryPrefetchScoreThreshold,
+    },
+  };
 
   /* SURFACES */
 
