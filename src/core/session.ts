@@ -18,6 +18,7 @@ import {
   DEFAULT_AGENT_DIR,
   type CompactionPlan,
 } from "./window/compaction-settings.js";
+import type { WindowManager } from "./window/window-manager.js";
 
 /** Typed event bus wrapper for session events. */
 export type EventBus<T> = {
@@ -50,7 +51,10 @@ export class SessionManager {
   private _sessionManager!: SdkSessionManager;
   private _disposed = false;
 
-  constructor(private charter: Charter) {
+  constructor(
+    private charter: Charter,
+    private windowManager?: WindowManager,
+  ) {
     this.onEvent = createEventBus() as unknown as EventBus<AgentSessionEvent>;
   }
 
@@ -98,6 +102,11 @@ export class SessionManager {
       cwd,
       agentDir: DEFAULT_AGENT_DIR,
       systemPrompt: this.charter.systemPrompt || undefined,
+      // Registered here so the compaction hooks are bound for both the
+      // automatic and the manual compaction paths from session creation.
+      ...(this.windowManager
+        ? { extensionFactories: [this.windowManager.extension()] }
+        : {}),
     });
 
     const result = await createAgentSession({
@@ -111,6 +120,8 @@ export class SessionManager {
     });
 
     this.session = result.session;
+
+    this.windowManager?.bindSession(this.session);
 
     this.session.subscribe((event: AgentSessionEvent) => {
       this.onEvent.emit("session_event", event);

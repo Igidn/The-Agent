@@ -5,12 +5,13 @@ import { SessionManager } from "./core/session.js";
 import { MessageQueue } from "./core/queue.js";
 import { Gateway } from "./api/gateway.js";
 import { WindowManager } from "./core/window/window-manager.js";
+import { JsonlCompactionSink } from "./core/window/audit-sink.js";
 
 /**
  * Daemon entry point.
  *
- * Start order: config → logging → charter → session → queue → gateway → signal handlers
- * Shutdown order: gateway stop → queue dispose → session stop
+ * Start order: config → charter → window manager → session → queue → gateway → signal handlers
+ * Shutdown order: gateway stop → queue dispose → window manager dispose → session stop
  */
 export async function main(): Promise<void> {
   // 1. Config
@@ -29,19 +30,22 @@ export async function main(): Promise<void> {
     console.log("Daemon: persona hot-reloaded");
   });
 
-  // 4. Session manager
-  const sessionManager = new SessionManager(charter);
+  // 4. Window manager (compaction hooks, audit sink, live-window boundary).
+  //    Built before the session: its extension must ride the session's
+  //    resource loader at creation time.
+  const windowManager = new WindowManager(
+    config.compaction,
+    new JsonlCompactionSink(),
+    { cheapModel: config.cheapModel },
+  );
+
+  // 5. Session manager
+  const sessionManager = new SessionManager(charter, windowManager);
   await sessionManager.start(config);
 
-  // 5. Message queue
+  // 6. Message queue
   const messageQueue = new MessageQueue(sessionManager);
   messageQueue.start();
-
-  // 6. Window manager (token tracking + manual compact)
-  const windowManager = new WindowManager(
-    sessionManager.session,
-    sessionManager.compactionPlan,
-  );
 
   // 7. Gateway (HTTP + WebSocket)
   const gateway = new Gateway(sessionManager, messageQueue, windowManager);
