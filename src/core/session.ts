@@ -16,6 +16,7 @@ import { Charter } from "./charter.js";
 import {
   applyCompactionSettings,
   DEFAULT_AGENT_DIR,
+  type CompactionPlan,
 } from "./window/compaction-settings.js";
 
 /** Typed event bus wrapper for session events. */
@@ -42,6 +43,9 @@ export class SessionManager {
 
   /** Model and auth runtime shared by every SDK call. */
   modelRuntime!: ModelRuntime;
+
+  /** Compaction policy plan, set during start(). */
+  compactionPlan!: CompactionPlan;
 
   private _sessionManager!: SdkSessionManager;
   private _disposed = false;
@@ -81,6 +85,7 @@ export class SessionManager {
       resolvedModel,
       settingsManager,
     );
+    this.compactionPlan = compactionPlan;
     console.log(
       `Compaction: auto-compact at ${compactionPlan.threshold} tokens, ` +
         `down to ${compactionPlan.target} ` +

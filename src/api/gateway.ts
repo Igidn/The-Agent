@@ -4,6 +4,8 @@ import { WebSocketServer, WebSocket } from "ws";
 import { MessageQueue, type QueueStatus } from "../core/queue.js";
 import { SessionManager, type EventBus } from "../core/session.js";
 import type { SurfaceId } from "../core/wrapper.js";
+import { WindowManager } from "../core/window/window-manager.js";
+import type { WindowStats } from "../core/window/types.js";
 import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
 
 /** A connected WebSocket client with its event subscription. */
@@ -23,8 +25,13 @@ export interface GatewayConfig {
  * HTTP + WebSocket gateway for surface clients.
  *
  * - POST /api/message — enqueue a message (returns message ID immediately)
+ * - POST /api/compact — trigger a manual compaction epoch
  * - GET  /api/status  — queue status + session info
- * - WS   /api/ws      — subscribe to streaming deltas
+ * - WS   /api/ws      — subscribe to streaming deltas and window stats
+ *
+ * After each turn and after every compaction epoch a {@link WindowStats}
+ * message is broadcast on the WS channel as `{ type: "window_stats", data: WindowStats }`
+ * so surfaces can show a busy/compacting state.
  *
  * CORS is enabled for localhost origins.
  */
@@ -35,11 +42,16 @@ export class Gateway {
   private _messageQueue: MessageQueue;
   private _sessionManager: SessionManager;
   private _eventBus: EventBus<AgentSessionEvent>;
+  private _windowManager: WindowManager | null = null;
 
-  constructor(sessionManager: SessionManager, messageQueue: MessageQueue) {
+  constructor(sessionManager: SessionManager, messageQueue: MessageQueue, windowManager?: WindowManager) {
     this._sessionManager = sessionManager;
     this._messageQueue = messageQueue;
     this._eventBus = sessionManager.onEvent;
+    if (windowManager) {
+      this._windowManager = windowManager;
+      this._windowManager.setOnStatsUpdate((stats) => this._broadcastWindowStats(stats));
+    }
   }
 
   /** Start the HTTP server. */
@@ -113,6 +125,8 @@ export class Gateway {
         this._handlePostMessage(req, res);
       } else if (method === "GET" && url === "/api/status") {
         this._handleGetStatus(req, res);
+      } else if (method === "POST" && url === "/api/compact") {
+        this._handlePostCompact(req, res);
       } else {
         this._jsonError(res, 404, "Not found");
       }
@@ -191,6 +205,47 @@ export class Gateway {
     res.end(JSON.stringify(status));
   }
 
+  /** POST /api/compact — trigger manual compaction. */
+  private async _handlePostCompact(
+    _req: IncomingMessage,
+    res: ServerResponse,
+  ): Promise<void> {
+    if (!this._windowManager) {
+      this._jsonError(res, 503, "Window manager not available (session not started)");
+      return;
+    }
+
+    try {
+      // Respond immediately so the client knows the request was accepted.
+      // Compaction may take a moment; the WS stats broadcast will signal
+      // completion.
+      const stats = this._windowManager.getStats();
+      res.writeHead(202, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({
+        status: "compacting",
+        stats,
+      }));
+
+      // Fire compaction in the background.
+      this._windowManager.manualCompact().catch((err) => {
+        console.error("Gateway: manual compact failed", err);
+      });
+    } catch (err) {
+      console.error("Gateway: /compact error", err);
+      this._jsonError(res, 500, "Internal server error");
+    }
+  }
+
+  /** Broadcast a window stats snapshot to every connected WS client. */
+  private _broadcastWindowStats(stats: WindowStats): void {
+    const message = JSON.stringify({ type: "window_stats", data: stats });
+    for (const client of this._wsClients) {
+      if (client.ws.readyState === WebSocket.OPEN) {
+        client.ws.send(message);
+      }
+    }
+  }
+
   private _handleWsConnection(ws: WebSocket, _req: IncomingMessage): void {
     const clientId = randomUUID();
 
@@ -209,7 +264,9 @@ export class Gateway {
         type === "message_end" ||
         type === "tool_execution_start" ||
         type === "tool_execution_update" ||
-        type === "tool_execution_end"
+        type === "tool_execution_end" ||
+        type === "compaction_start" ||
+        type === "compaction_end"
       ) {
         ws.send(JSON.stringify(event));
       }

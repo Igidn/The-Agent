@@ -4,6 +4,7 @@ import { Charter } from "./core/charter.js";
 import { SessionManager } from "./core/session.js";
 import { MessageQueue } from "./core/queue.js";
 import { Gateway } from "./api/gateway.js";
+import { WindowManager } from "./core/window/window-manager.js";
 
 /**
  * Daemon entry point.
@@ -36,14 +37,21 @@ export async function main(): Promise<void> {
   const messageQueue = new MessageQueue(sessionManager);
   messageQueue.start();
 
-  // 6. Gateway (HTTP + WebSocket)
-  const gateway = new Gateway(sessionManager, messageQueue);
+  // 6. Window manager (token tracking + manual compact)
+  const windowManager = new WindowManager(
+    sessionManager.session,
+    sessionManager.compactionPlan,
+  );
+
+  // 7. Gateway (HTTP + WebSocket)
+  const gateway = new Gateway(sessionManager, messageQueue, windowManager);
   await gateway.start({ host: config.host, port: config.port });
 
-  // 7. Signal handlers
+  // 8. Signal handlers
   const shutdown = async (signal: string) => {
     console.log(`\nDaemon: ${signal} received, shutting down...`);
     await gateway.stop();
+    windowManager.dispose();
     messageQueue.dispose();
     await sessionManager.stop();
     process.exit(0);
