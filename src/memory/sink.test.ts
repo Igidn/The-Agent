@@ -211,7 +211,10 @@ test("sink persists rolling summary chunks as episodic items", async () => {
       "Old rolling summary covering earlier topics.",
       "Middle summary that adds more context.",
     ],
-    summary: "Latest summary of the conversation segment.",
+    // The SDK merges previous summaries into the epoch summary (update
+    // prompt), so this summary already covers the old content.
+    summary:
+      "Merged latest summary of the conversation segment. It covers earlier topics and adds more context.",
     droppedMessages: [],
   });
 
@@ -230,11 +233,14 @@ test("sink persists rolling summary chunks as episodic items", async () => {
     assert.equal(item.importance, 5);
   }
 
-  // All summary content should be present across items
+  // Only the epoch's own summary is stored; previousSummaries are already
+  // contained in it and must not be re-embedded as duplicates.
   const fullStored = summaryItems.map((i) => i.content).join(" ");
-  assert.ok(fullStored.includes("Old rolling summary"));
-  assert.ok(fullStored.includes("Middle summary"));
-  assert.ok(fullStored.includes("Latest summary"));
+  assert.ok(fullStored.includes("Merged latest summary"));
+  assert.ok(
+    !fullStored.includes("Old rolling summary covering earlier topics"),
+    "previous summaries should not be re-stored verbatim",
+  );
 });
 
 test("sink skips extraction when there are no dropped messages", async () => {

@@ -113,8 +113,11 @@ export async function prefetch(
     return { context: null, hits: [] };
   }
 
-  // Step 2: vector search across both tiers
-  const allResults = await store.search(queryText, cfg.topK);
+  // Step 2: vector search over episodic candidates. Profile items are
+  // excluded: they are already in the system prompt (byte-stable), so
+  // surfacing them in <memory-context> would double-count them and eat
+  // the token budget.
+  const allResults = await store.search(queryText, cfg.topK, ["episodic"]);
 
   if (allResults.length === 0) {
     return { context: null, hits: [] };

@@ -182,10 +182,11 @@ test("prefetch: excludes live items whose sourceEntryId is in the window", async
 
 test("prefetch: items with null sourceEntryId are always eligible", async () => {
   await withTempStore(async (store) => {
-    // Profile items typically have null sourceEntryId
+    // Summary chunks and consolidated facts typically have null sourceEntryId.
     await insertItem(store, {
       content: "user is a software engineer",
-      tier: "profile",
+      tier: "episodic",
+      tags: ["summary"],
       sourceEntryId: null,
     });
 
@@ -197,7 +198,7 @@ test("prefetch: items with null sourceEntryId are always eligible", async () => 
       DEFAULT_CFG,
     );
 
-    assert.ok(result.context !== null, "should find profile items");
+    assert.ok(result.context !== null, "should find null-source items");
   });
 });
 
@@ -433,7 +434,7 @@ test("prefetch: multiple items rendered as bullet lines", async () => {
   });
 });
 
-test("prefetch: items from both tiers can be returned", async () => {
+test("prefetch: profile items are never returned", async () => {
   await withTempStore(async (store) => {
     await insertItem(store, {
       content: "user is a system architect",
@@ -454,6 +455,13 @@ test("prefetch: items from both tiers can be returned", async () => {
       DEFAULT_CFG,
     );
 
-    assert.ok(result.context !== null, "should return items from both tiers");
+    // Profile items live in the system prompt already; prefetch draws
+    // from the episodic tier only.
+    const tiers = result.hits.map((h) => h.item.tier);
+    assert.ok(
+      !tiers.includes("profile"),
+      `profile items must not be prefetched, got tiers: ${tiers}`,
+    );
+    assert.ok(result.context !== null, "episodic items should be returned");
   });
 });

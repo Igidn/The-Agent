@@ -214,16 +214,16 @@ export class MemoryCompactionSink implements CompactionSink {
   // ------------------------------------------------------------------
 
   private async _persistRollingSummary(event: CompactionEvent): Promise<void> {
-    const { previousSummaries, summary } = event;
+    // The SDK merges previousSummary into the new epoch summary (its update
+    // prompt), so `event.summary` already contains everything the older
+    // rolling summaries did. Re-storing `previousSummaries` would re-embed
+    // all past summary content at every epoch — O(N²) duplicate chunks in
+    // the index. Only the epoch's own summary is stored.
+    const { summary } = event;
 
-    // Build the full rolling summary history: oldest first
-    const fullText = [...previousSummaries, summary]
-      .filter((s) => s.length > 0)
-      .join("\n\n");
+    if (summary.length === 0) return;
 
-    if (fullText.length === 0) return;
-
-    const chunks = chunkSummary(fullText);
+    const chunks = chunkSummary(summary);
 
     for (const chunk of chunks) {
       try {
