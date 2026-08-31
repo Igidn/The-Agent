@@ -1,5 +1,21 @@
 export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 
+/**
+ * Auto-compaction policy in the design's absolute token counts.
+ *
+ * The design's open question ("is 80k→40k right?") is answered here, in
+ * config: COMPACT_AT_TOKENS sets the live-window threshold that triggers a
+ * compaction epoch, COMPACT_TO_TOKENS sets how many recent tokens the epoch
+ * keeps. The window manager maps these onto the SDK's relative
+ * reserveTokens/keepRecentTokens against the resolved model's contextWindow.
+ */
+export interface CompactionConfig {
+  /** Trigger compaction when the live window reaches this many tokens. */
+  compactAtTokens: number;
+  /** Keep only this many recent tokens after a compaction epoch. */
+  compactToTokens: number;
+}
+
 export interface DaemonConfig {
   /** Host to bind the gateway server to. Default "127.0.0.1". */
   host: string;
@@ -7,6 +23,8 @@ export interface DaemonConfig {
   port: number;
   /** Path to the persona directory (charter, few-shots, etc.). Default "./persona". */
   personaDir: string;
+  /** Auto-compaction policy in absolute token counts. */
+  compaction: CompactionConfig;
   /** Optional model configuration. */
   model?: {
     provider: string;
@@ -66,6 +84,26 @@ export function loadConfig(): DaemonConfig {
 
   const personaDir = str(process.env.PERSONA_DIR, "./persona");
 
+  const compactAtTokens = num(process.env.COMPACT_AT_TOKENS, 80000);
+  const compactToTokens = num(process.env.COMPACT_TO_TOKENS, 40000);
+
+  if (!Number.isInteger(compactAtTokens) || compactAtTokens < 1) {
+    throw new Error(
+      `COMPACT_AT_TOKENS must be a positive integer, got ${compactAtTokens}`,
+    );
+  }
+  if (!Number.isInteger(compactToTokens) || compactToTokens < 1) {
+    throw new Error(
+      `COMPACT_TO_TOKENS must be a positive integer, got ${compactToTokens}`,
+    );
+  }
+  if (compactToTokens >= compactAtTokens) {
+    throw new Error(
+      "COMPACT_TO_TOKENS must be smaller than COMPACT_AT_TOKENS " +
+        `(got ${compactToTokens} vs ${compactAtTokens})`,
+    );
+  }
+
   const modelProvider = process.env.MODEL_PROVIDER;
   const modelId = process.env.MODEL_ID;
   let model: DaemonConfig["model"] = undefined;
@@ -103,5 +141,12 @@ export function loadConfig(): DaemonConfig {
     };
   }
 
-  return { host, port, personaDir, model, surfaces };
+  return {
+    host,
+    port,
+    personaDir,
+    compaction: { compactAtTokens, compactToTokens },
+    model,
+    surfaces,
+  };
 }

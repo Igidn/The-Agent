@@ -1,6 +1,3 @@
-import { homedir } from "node:os";
-import { join } from "node:path";
-
 import type { DaemonConfig } from "../config/index.js";
 import {
   createAgentSession,
@@ -8,6 +5,7 @@ import {
   DefaultResourceLoader,
   ModelRuntime,
   SessionManager as SdkSessionManager,
+  SettingsManager,
 } from "@earendil-works/pi-coding-agent";
 import type {
   AgentSession,
@@ -15,8 +13,10 @@ import type {
   PromptOptions,
 } from "@earendil-works/pi-coding-agent";
 import { Charter } from "./charter.js";
-
-const DEFAULT_AGENT_DIR = join(homedir(), ".pi", "agent");
+import {
+  applyCompactionSettings,
+  DEFAULT_AGENT_DIR,
+} from "./window/compaction-settings.js";
 
 /** Typed event bus wrapper for session events. */
 export type EventBus<T> = {
@@ -75,6 +75,18 @@ export class SessionManager {
     const resolvedModel = await this._resolveModel(config);
     const cwd = process.cwd();
 
+    const settingsManager = SettingsManager.create(cwd, DEFAULT_AGENT_DIR);
+    const compactionPlan = await applyCompactionSettings(
+      config.compaction,
+      resolvedModel,
+      settingsManager,
+    );
+    console.log(
+      `Compaction: auto-compact at ${compactionPlan.threshold} tokens, ` +
+        `down to ${compactionPlan.target} ` +
+        `(window ${compactionPlan.contextWindow})`,
+    );
+
     this._sessionManager = SdkSessionManager.continueRecent(cwd);
 
     const resourceLoader = new DefaultResourceLoader({
@@ -87,6 +99,7 @@ export class SessionManager {
       model: resolvedModel,
       modelRuntime: this.modelRuntime,
       sessionManager: this._sessionManager,
+      settingsManager,
       resourceLoader,
       cwd,
       tools: ["read", "bash", "edit", "write"],
