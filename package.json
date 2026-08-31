@@ -9,7 +9,7 @@
     "start": "node dist/main.js",
     "dev": "tsc --watch & node --watch dist/main.js",
     "eval": "node --env-file-if-exists=.env dist/eval/main.js",
-    "test": "tsc && node --test 'dist/eval/*.test.js'"
+    "test": "tsc && node --test 'dist/**/*.test.js'"
   },
   "repository": {
     "type": "git",
