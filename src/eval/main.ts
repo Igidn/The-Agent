@@ -8,6 +8,7 @@ import { printReport, writeRunArtifacts } from "./report.js";
 import { EVAL_CASES } from "./cases.js";
 import { resolveEvalModel, type EvalModelSpec } from "./llm.js";
 import { runEval } from "./runner.js";
+import { runCompactionEval } from "./compaction.js";
 
 /** Default eval model. Changing the default without re-running eval is a regression. */
 const DEFAULT_EVAL_MODEL: EvalModelSpec = { provider: "openrouter", id: "z-ai/glm-5.3-flash" };
@@ -19,6 +20,9 @@ Flags:
                           or MODEL_PROVIDER/MODEL_ID from the environment.
   --persona <dir>         Persona directory. Default: PERSONA_DIR or ./persona.
   --filter <substring>    Run only cases whose id or category contains this.
+  --compaction            Run the compaction-quality suite (summary survival,
+                          tool-spam drop, memory-context strip, consolidation)
+                          instead of the persona cases. No persona needed.
   --out <dir>             Where run artifacts are written. Default: .eval/runs.
   --concurrency <n>       Cases in flight at once. Default: 4.`;
 
@@ -57,9 +61,12 @@ function loadDotEnv(path: string): void {
  * (bad flags, missing key, unresolvable model, empty persona).
  */
 export async function evalMain(argv: readonly string[]): Promise<number> {
+  const compactionRequested = argv.includes("--compaction");
+  const args = argv.filter((a) => a !== "--compaction");
+
   const flags = new Map<string, string>();
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
     if (arg === "--help" || arg === "-h") {
       console.log(USAGE);
       return 0;
@@ -69,7 +76,7 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
       console.log(USAGE);
       return 2;
     }
-    const value = argv[i + 1];
+    const value = args[i + 1];
     if (value === undefined || value.startsWith("--")) {
       console.error(`Flag ${arg} needs a value`);
       console.log(USAGE);
@@ -87,6 +94,13 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
     : config.model !== undefined
       ? { provider: config.model.provider, id: config.model.id }
       : DEFAULT_EVAL_MODEL;
+
+  if (compactionRequested) {
+    console.log(`Running compaction-quality eval against ${modelSpec.provider}/${modelSpec.id}`);
+    const result = await runCompactionEval(modelSpec);
+    console.log(`\nCompaction eval: ${result.passed}/${result.total} cases passed`);
+    return result.passed === result.total ? 0 : 1;
+  }
 
   const personaDir = resolve(flags.get("--persona") ?? config.personaDir);
 
