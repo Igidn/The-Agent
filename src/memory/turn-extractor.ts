@@ -1,12 +1,9 @@
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type {
-  AgentSession,
-  AgentSessionEvent,
-} from "@earendil-works/pi-coding-agent";
-import type { Api, Model, Models } from "@earendil-works/pi-ai";
+import type { AgentMessage } from '@earendil-works/pi-agent-core';
+import type { AgentSession, AgentSessionEvent } from '@earendil-works/pi-coding-agent';
+import type { Api, Model, Models } from '@earendil-works/pi-ai';
 
-import type { ExtractedFact, MemoryStore } from "./types.js";
-import { ingestFact } from "./extract.js";
+import type { ExtractedFact, MemoryStore } from './types.js';
+import { ingestFact } from './extract.js';
 
 /**
  * Signature that the turn extractor accepts for fact extraction.
@@ -68,9 +65,9 @@ export class TurnExtractor {
     this._session = session;
     this._lastMessageCount = session.messages.length;
     this._unsub = session.subscribe((event: AgentSessionEvent) => {
-      if (event.type === "agent_settled") {
+      if (event.type === 'agent_settled') {
         this._onSettled().catch((err) => {
-          console.warn("TurnExtractor: extraction failed", err);
+          console.warn('TurnExtractor: extraction failed', err);
         });
       }
     });
@@ -136,10 +133,7 @@ export class TurnExtractor {
       try {
         await ingestFact(this._store, fact, sourceEntryId);
       } catch (err) {
-        console.warn(
-          `TurnExtractor: failed to persist fact "${fact.content.slice(0, 60)}"`,
-          err,
-        );
+        console.warn(`TurnExtractor: failed to persist fact "${fact.content.slice(0, 60)}"`, err);
       }
     }
   }

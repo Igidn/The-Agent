@@ -1,16 +1,11 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { test } from "node:test";
-import assert from "node:assert/strict";
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
 
-import { SqliteMemoryStore } from "./store.js";
-import type {
-  EmbeddingProvider,
-  MemoryItem,
-  MemoryTag,
-  MemoryTier,
-} from "./types.js";
+import { SqliteMemoryStore } from './store.js';
+import type { EmbeddingProvider, MemoryItem, MemoryTag, MemoryTier } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Fake embedding provider — deterministic, constant-dimension, no ML needed.
@@ -47,8 +42,8 @@ const fakeEmbeddings: EmbeddingProvider = {
 async function withTempStore(
   fn: (store: SqliteMemoryStore, dbPath: string) => Promise<void>,
 ): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), "memory-store-"));
-  const dbPath = join(dir, "test.db");
+  const dir = await mkdtemp(join(tmpdir(), 'memory-store-'));
+  const dbPath = join(dir, 'test.db');
   const store = new SqliteMemoryStore(dbPath, fakeEmbeddings);
   try {
     await fn(store, dbPath);
@@ -59,11 +54,13 @@ async function withTempStore(
 }
 
 /** A minimal item payload for testing. */
-function makeItem(overrides?: Partial<MemoryItem>): Omit<MemoryItem, "id" | "createdAt" | "updatedAt"> {
+function makeItem(
+  overrides?: Partial<MemoryItem>,
+): Omit<MemoryItem, 'id' | 'createdAt' | 'updatedAt'> {
   return {
-    tier: overrides?.tier ?? "episodic",
-    content: overrides?.content ?? "some memory content",
-    tags: overrides?.tags ?? ["event"],
+    tier: overrides?.tier ?? 'episodic',
+    content: overrides?.content ?? 'some memory content',
+    tags: overrides?.tags ?? ['event'],
     entities: overrides?.entities,
     importance: overrides?.importance ?? 0.5,
     sourceEntryId: overrides?.sourceEntryId ?? null,
@@ -74,110 +71,110 @@ function makeItem(overrides?: Partial<MemoryItem>): Omit<MemoryItem, "id" | "cre
 // Tests
 // ---------------------------------------------------------------------------
 
-test("SqliteMemoryStore: upsert creates a new item with generated id", async () => {
+test('SqliteMemoryStore: upsert creates a new item with generated id', async () => {
   await withTempStore(async (store) => {
-    const item = await store.upsert(makeItem({ content: "hello world" }));
-    assert.ok(typeof item.id === "string" && item.id.length > 0);
-    assert.equal(item.content, "hello world");
-    assert.equal(item.tier, "episodic");
-    assert.deepEqual(item.tags, ["event"]);
+    const item = await store.upsert(makeItem({ content: 'hello world' }));
+    assert.ok(typeof item.id === 'string' && item.id.length > 0);
+    assert.equal(item.content, 'hello world');
+    assert.equal(item.tier, 'episodic');
+    assert.deepEqual(item.tags, ['event']);
     assert.equal(item.importance, 0.5);
     assert.equal(item.sourceEntryId, null);
-    assert.ok(typeof item.createdAt === "string");
+    assert.ok(typeof item.createdAt === 'string');
     assert.equal(item.updatedAt, item.createdAt);
   });
 });
 
-test("SqliteMemoryStore: upsert with existing id updates in place", async () => {
+test('SqliteMemoryStore: upsert with existing id updates in place', async () => {
   await withTempStore(async (store) => {
-    const original = await store.upsert(makeItem({ content: "original" }));
+    const original = await store.upsert(makeItem({ content: 'original' }));
     const updated = await store.upsert({
-      ...makeItem({ content: "updated version", importance: 0.9 }),
+      ...makeItem({ content: 'updated version', importance: 0.9 }),
       id: original.id,
     });
 
     assert.equal(updated.id, original.id);
-    assert.equal(updated.content, "updated version");
+    assert.equal(updated.content, 'updated version');
     assert.equal(updated.importance, 0.9);
     assert.ok(new Date(updated.updatedAt) > new Date(original.updatedAt));
   });
 });
 
-test("SqliteMemoryStore: upsert throws on update for nonexistent id", async () => {
+test('SqliteMemoryStore: upsert throws on update for nonexistent id', async () => {
   await withTempStore(async (store) => {
     await assert.rejects(
       () =>
         store.upsert({
           ...makeItem(),
-          id: "nonexistent-uuid",
+          id: 'nonexistent-uuid',
         }),
       /not found/,
     );
   });
 });
 
-test("SqliteMemoryStore: get returns the item or null", async () => {
+test('SqliteMemoryStore: get returns the item or null', async () => {
   await withTempStore(async (store) => {
-    const created = await store.upsert(makeItem({ content: "gettable" }));
+    const created = await store.upsert(makeItem({ content: 'gettable' }));
     const found = await store.get(created.id);
     assert.notEqual(found, null);
-    assert.equal(found!.content, "gettable");
+    assert.equal(found!.content, 'gettable');
 
-    const missing = await store.get("no-such-id");
+    const missing = await store.get('no-such-id');
     assert.equal(missing, null);
   });
 });
 
-test("SqliteMemoryStore: list returns all items sorted by newest first", async () => {
+test('SqliteMemoryStore: list returns all items sorted by newest first', async () => {
   await withTempStore(async (store) => {
-    await store.upsert(makeItem({ content: "first" }));
+    await store.upsert(makeItem({ content: 'first' }));
     // Slight delay to ensure ordering
     await new Promise((r) => setTimeout(r, 5));
-    await store.upsert(makeItem({ content: "second" }));
+    await store.upsert(makeItem({ content: 'second' }));
 
     const all = await store.list();
     assert.equal(all.length, 2);
     // Most recent first
-    assert.equal(all[0].content, "second");
-    assert.equal(all[1].content, "first");
+    assert.equal(all[0].content, 'second');
+    assert.equal(all[1].content, 'first');
   });
 });
 
-test("SqliteMemoryStore: list with tier filter", async () => {
+test('SqliteMemoryStore: list with tier filter', async () => {
   await withTempStore(async (store) => {
-    await store.upsert(makeItem({ content: "ep event", tier: "episodic" }));
-    await store.upsert(makeItem({ content: "profile info", tier: "profile" }));
+    await store.upsert(makeItem({ content: 'ep event', tier: 'episodic' }));
+    await store.upsert(makeItem({ content: 'profile info', tier: 'profile' }));
 
-    const episodic = await store.list({ tier: "episodic" });
+    const episodic = await store.list({ tier: 'episodic' });
     assert.equal(episodic.length, 1);
-    assert.equal(episodic[0].tier, "episodic");
+    assert.equal(episodic[0].tier, 'episodic');
 
-    const profile = await store.list({ tier: "profile" });
+    const profile = await store.list({ tier: 'profile' });
     assert.equal(profile.length, 1);
-    assert.equal(profile[0].tier, "profile");
+    assert.equal(profile[0].tier, 'profile');
   });
 });
 
-test("SqliteMemoryStore: list with tag filter", async () => {
+test('SqliteMemoryStore: list with tag filter', async () => {
   await withTempStore(async (store) => {
-    await store.upsert(makeItem({ content: "likes coffee", tags: ["preference"] }));
-    await store.upsert(makeItem({ content: "met alice", tags: ["person"] }));
-    await store.upsert(makeItem({ content: "project gamma", tags: ["project"] }));
+    await store.upsert(makeItem({ content: 'likes coffee', tags: ['preference'] }));
+    await store.upsert(makeItem({ content: 'met alice', tags: ['person'] }));
+    await store.upsert(makeItem({ content: 'project gamma', tags: ['project'] }));
 
-    const withPrefs = await store.list({ tags: ["preference"] });
+    const withPrefs = await store.list({ tags: ['preference'] });
     assert.equal(withPrefs.length, 1);
-    assert.equal(withPrefs[0].content, "likes coffee");
+    assert.equal(withPrefs[0].content, 'likes coffee');
 
-    const withPerson = await store.list({ tags: ["person"] });
+    const withPerson = await store.list({ tags: ['person'] });
     assert.equal(withPerson.length, 1);
 
     // Multiple tags: OR logic
-    const prefsOrPerson = await store.list({ tags: ["preference", "person"] });
+    const prefsOrPerson = await store.list({ tags: ['preference', 'person'] });
     assert.equal(prefsOrPerson.length, 2);
   });
 });
 
-test("SqliteMemoryStore: list with pagination", async () => {
+test('SqliteMemoryStore: list with pagination', async () => {
   await withTempStore(async (store) => {
     for (let i = 0; i < 5; i++) {
       await store.upsert(makeItem({ content: `item ${i}` }));
@@ -185,17 +182,17 @@ test("SqliteMemoryStore: list with pagination", async () => {
 
     const page1 = await store.list({ limit: 2, offset: 0 });
     assert.equal(page1.length, 2);
-    assert.equal(page1[0].content, "item 4"); // newest first
+    assert.equal(page1[0].content, 'item 4'); // newest first
 
     const page2 = await store.list({ limit: 2, offset: 2 });
     assert.equal(page2.length, 2);
-    assert.equal(page2[0].content, "item 2");
+    assert.equal(page2[0].content, 'item 2');
   });
 });
 
-test("SqliteMemoryStore: delete removes item and vector", async () => {
+test('SqliteMemoryStore: delete removes item and vector', async () => {
   await withTempStore(async (store) => {
-    const item = await store.upsert(makeItem({ content: "to-delete" }));
+    const item = await store.upsert(makeItem({ content: 'to-delete' }));
     assert.notEqual(await store.get(item.id), null);
 
     await store.delete(item.id);
@@ -203,22 +200,22 @@ test("SqliteMemoryStore: delete removes item and vector", async () => {
   });
 });
 
-test("SqliteMemoryStore: delete is idempotent", async () => {
+test('SqliteMemoryStore: delete is idempotent', async () => {
   await withTempStore(async (store) => {
-    await store.delete("never-existed");
+    await store.delete('never-existed');
     // No error = success
   });
 });
 
-test("SqliteMemoryStore: search returns ScoredItem[] ordered by similarity", async () => {
+test('SqliteMemoryStore: search returns ScoredItem[] ordered by similarity', async () => {
   await withTempStore(async (store) => {
     // Insert items with different content
-    await store.upsert(makeItem({ content: "cats are furry animals" }));
-    await store.upsert(makeItem({ content: "dogs are loyal pets" }));
-    await store.upsert(makeItem({ content: "quantum physics is fascinating" }));
+    await store.upsert(makeItem({ content: 'cats are furry animals' }));
+    await store.upsert(makeItem({ content: 'dogs are loyal pets' }));
+    await store.upsert(makeItem({ content: 'quantum physics is fascinating' }));
 
     // Search returns results sorted by cosine (higher = more similar)
-    const results = await store.search("feline cats", 5);
+    const results = await store.search('feline cats', 5);
     assert.ok(results.length > 0);
     assert.ok(results[0].cosine >= 0);
     assert.ok(results[0].score >= 0);
@@ -229,77 +226,81 @@ test("SqliteMemoryStore: search returns ScoredItem[] ordered by similarity", asy
   });
 });
 
-test("SqliteMemoryStore: search with tier filter", async () => {
+test('SqliteMemoryStore: search with tier filter', async () => {
   await withTempStore(async (store) => {
-    await store.upsert(makeItem({
-      content: "user likes hiking",
-      tags: ["preference"],
-      tier: "episodic",
-    }));
-    await store.upsert(makeItem({
-      content: "user is an engineer",
-      tags: ["person"],
-      tier: "profile",
-    }));
+    await store.upsert(
+      makeItem({
+        content: 'user likes hiking',
+        tags: ['preference'],
+        tier: 'episodic',
+      }),
+    );
+    await store.upsert(
+      makeItem({
+        content: 'user is an engineer',
+        tags: ['person'],
+        tier: 'profile',
+      }),
+    );
 
-    const episodicResults = await store.search("engineer", 5, ["episodic"]);
+    const episodicResults = await store.search('engineer', 5, ['episodic']);
     // The profile item ("user is an engineer") should be filtered out
     for (const r of episodicResults) {
-      assert.equal(r.item.tier, "episodic");
+      assert.equal(r.item.tier, 'episodic');
     }
 
-    const profileResults = await store.search("hiking", 5, ["profile"]);
+    const profileResults = await store.search('hiking', 5, ['profile']);
     for (const r of profileResults) {
-      assert.equal(r.item.tier, "profile");
+      assert.equal(r.item.tier, 'profile');
     }
   });
 });
 
-test("SqliteMemoryStore: search with k=0 returns empty", async () => {
+test('SqliteMemoryStore: search with k=0 returns empty', async () => {
   await withTempStore(async (store) => {
-    await store.upsert(makeItem({ content: "something" }));
-    const results = await store.search("something", 0);
+    await store.upsert(makeItem({ content: 'something' }));
+    const results = await store.search('something', 0);
     assert.deepEqual(results, []);
   });
 });
 
-test("SqliteMemoryStore: stores and retrieves entities", async () => {
+test('SqliteMemoryStore: stores and retrieves entities', async () => {
   await withTempStore(async (store) => {
     const item = await store.upsert(
       makeItem({
-        content: "met Bob at the cafe",
-        entities: ["Bob", "cafe"],
+        content: 'met Bob at the cafe',
+        entities: ['Bob', 'cafe'],
       }),
     );
-    assert.deepEqual(item.entities, ["Bob", "cafe"]);
+    assert.deepEqual(item.entities, ['Bob', 'cafe']);
 
     const fetched = await store.get(item.id);
-    assert.deepEqual(fetched!.entities, ["Bob", "cafe"]);
+    assert.deepEqual(fetched!.entities, ['Bob', 'cafe']);
   });
 });
 
-test("SqliteMemoryStore: stores and retrieves sourceEntryId", async () => {
+test('SqliteMemoryStore: stores and retrieves sourceEntryId', async () => {
   await withTempStore(async (store) => {
     const item = await store.upsert(
       makeItem({
-        content: "from a conversation",
-        sourceEntryId: "entry-42",
+        content: 'from a conversation',
+        sourceEntryId: 'entry-42',
       }),
     );
-    assert.equal(item.sourceEntryId, "entry-42");
+    assert.equal(item.sourceEntryId, 'entry-42');
 
     const fetched = await store.get(item.id);
-    assert.equal(fetched!.sourceEntryId, "entry-42");
+    assert.equal(fetched!.sourceEntryId, 'entry-42');
 
     // null sourceEntryId is also fine
-    const noSource = await store.upsert(makeItem({ content: "no source" }));
+    const noSource = await store.upsert(makeItem({ content: 'no source' }));
     assert.equal(noSource.sourceEntryId, null);
   });
 });
 
-test("SqliteMemoryStore: close is idempotent and does not error", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "memory-close-"));
-  const dbPath = join(dir, "test.db");
+test('SqliteMemoryStore: close is idempotent and does not error', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'memory-close-'));
+  const dbPath = join(dir, 'test.db');
   const store = new SqliteMemoryStore(dbPath, fakeEmbeddings);
   await store.close();
   // Second close should not throw
@@ -307,17 +308,17 @@ test("SqliteMemoryStore: close is idempotent and does not error", async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-test("SqliteMemoryStore: does not share state between instances", async () => {
-  const dir = await mkdtemp(join(tmpdir(), "memory-isolated-"));
-  const dbPath = join(dir, "test.db");
+test('SqliteMemoryStore: does not share state between instances', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'memory-isolated-'));
+  const dbPath = join(dir, 'test.db');
   const storeA = new SqliteMemoryStore(dbPath, fakeEmbeddings);
   const storeB = new SqliteMemoryStore(dbPath, fakeEmbeddings);
 
   try {
-    await storeA.upsert(makeItem({ content: "from A" }));
+    await storeA.upsert(makeItem({ content: 'from A' }));
     const itemsB = await storeB.list();
     assert.equal(itemsB.length, 1);
-    assert.equal(itemsB[0].content, "from A");
+    assert.equal(itemsB[0].content, 'from A');
   } finally {
     await storeA.close();
     await storeB.close();

@@ -1,13 +1,13 @@
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import type { AgentMessage } from '@earendil-works/pi-agent-core';
 
-import type { CompactionEvent, CompactionSink } from "../core/window/types.js";
+import type { CompactionEvent, CompactionSink } from '../core/window/types.js';
 import type {
   EmbeddingProvider,
   ExtractedFact,
   MemoryItem,
   MemoryTag,
   MemoryStore,
-} from "./types.js";
+} from './types.js';
 
 /**
  * Bound extract function: takes messages and returns extracted facts.
@@ -26,10 +26,7 @@ export type ExtractFactsFn = (
  * Deduplication and correction merge are handled by the bound function
  * (the impl from extract.ts), not by the sink.
  */
-export type IngestFactFn = (
-  fact: ExtractedFact,
-  sourceEntryId: string | null,
-) => Promise<void>;
+export type IngestFactFn = (fact: ExtractedFact, sourceEntryId: string | null) => Promise<void>;
 
 /**
  * Bound consolidation function: called after the sink finishes writing.
@@ -49,10 +46,7 @@ export type ConsolidateFn = () => Promise<void>;
  *
  * Exported for testing.
  */
-export function chunkSummary(
-  text: string,
-  targetChars = 1000,
-): string[] {
+export function chunkSummary(text: string, targetChars = 1000): string[] {
   if (text.length === 0) return [];
   if (text.length <= targetChars) return [text];
 
@@ -86,7 +80,7 @@ export function chunkSummary(
       start += lastBoundary;
     } else {
       // No sentence boundary found — fall back to word boundary
-      const lastSpace = segment.lastIndexOf(" ");
+      const lastSpace = segment.lastIndexOf(' ');
       if (lastSpace > 0) {
         chunks.push(segment.slice(0, lastSpace).trim());
         start += lastSpace;
@@ -105,8 +99,6 @@ export function chunkSummary(
 
   return chunks.filter((c) => c.length > 0);
 }
-
-
 
 /**
  * Compaction sink that re-extracts facts from dropped messages, persists
@@ -179,10 +171,7 @@ export class MemoryCompactionSink implements CompactionSink {
         }
       }
     } catch (err) {
-      console.warn(
-        "Compaction sink: fact extraction from dropped messages failed",
-        err,
-      );
+      console.warn('Compaction sink: fact extraction from dropped messages failed', err);
     }
   }
 
@@ -201,9 +190,9 @@ export class MemoryCompactionSink implements CompactionSink {
     for (const chunk of chunks) {
       try {
         await this._store.upsert({
-          tier: "episodic",
+          tier: 'episodic',
           content: chunk,
-          tags: ["summary" as MemoryTag],
+          tags: ['summary' as MemoryTag],
           entities: undefined,
           importance: 5, // Neutral importance for summary material
           sourceEntryId: null, // Not linked to a live entry
@@ -221,7 +210,7 @@ export class MemoryCompactionSink implements CompactionSink {
     try {
       await this._consolidate();
     } catch (err) {
-      console.warn("Compaction sink: consolidation callback failed", err);
+      console.warn('Compaction sink: consolidation callback failed', err);
     }
   }
 }

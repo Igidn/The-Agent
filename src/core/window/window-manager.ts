@@ -6,13 +6,13 @@ import type {
   ExtensionFactory,
   SessionBeforeCompactEvent,
   SessionCompactEvent,
-} from "@earendil-works/pi-coding-agent";
-import { generateSummaryWithUsage } from "@earendil-works/pi-coding-agent";
-import type { Api, Model, Models, Usage } from "@earendil-works/pi-ai";
+} from '@earendil-works/pi-coding-agent';
+import { generateSummaryWithUsage } from '@earendil-works/pi-coding-agent';
+import type { Api, Model, Models, Usage } from '@earendil-works/pi-ai';
 
-import type { CompactionConfig } from "../../shared/types.js";
-import { compactionInstructions, consolidateSummary } from "./compaction.js";
-import type { CompactionEvent, CompactionSink, LiveWindow, WindowStats } from "./types.js";
+import type { CompactionConfig } from '../../shared/types.js';
+import { compactionInstructions, consolidateSummary } from './compaction.js';
+import type { CompactionEvent, CompactionSink, LiveWindow, WindowStats } from './types.js';
 
 /** Same signature as the SDK's generateSummaryWithUsage. */
 export type SummaryFn = typeof generateSummaryWithUsage;
@@ -103,19 +103,18 @@ export class WindowManager {
    */
   extension(): { name: string; hidden: boolean; factory: ExtensionFactory } {
     return {
-      name: "window-manager",
+      name: 'window-manager',
       hidden: true,
       factory: (pi: ExtensionAPI) => {
-        pi.on("session_before_compact", async (
-          event: SessionBeforeCompactEvent,
-          ctx: ExtensionContext,
-        ) => this._onBeforeCompact(event, ctx));
+        pi.on(
+          'session_before_compact',
+          async (event: SessionBeforeCompactEvent, ctx: ExtensionContext) =>
+            this._onBeforeCompact(event, ctx),
+        );
 
-        pi.on("session_compact", (event: SessionCompactEvent) =>
-          this._onCompacted(event));
+        pi.on('session_compact', (event: SessionCompactEvent) => this._onCompacted(event));
 
-        pi.on("session_compact_failed", (event) =>
-          this._onCompactFailed(event));
+        pi.on('session_compact_failed', (event) => this._onCompactFailed(event));
       },
     };
   }
@@ -127,8 +126,7 @@ export class WindowManager {
   bindSession(session: AgentSession): void {
     this._unsub?.();
     this._session = session;
-    this._unsub = session.subscribe((event: AgentSessionEvent) =>
-      this._onSessionEvent(event));
+    this._unsub = session.subscribe((event: AgentSessionEvent) => this._onSessionEvent(event));
   }
 
   /** Register or replace the stats broadcast callback. */
@@ -170,15 +168,11 @@ export class WindowManager {
         const session = this._session;
         if (session === null) return true;
         const entries = session.sessionManager.getEntries();
-        const boundaryIndex = entries.findIndex(
-          (e) => e.id === this._boundaryEntryId,
-        );
+        const boundaryIndex = entries.findIndex((e) => e.id === this._boundaryEntryId);
         // Boundary not on the current branch (fork/switch): cannot tell,
         // treat everything as live so prefetch under-filters, never over.
         if (boundaryIndex < 0) return true;
-        return entries.some(
-          (e, i) => i >= boundaryIndex && e.id === entryId,
-        );
+        return entries.some((e, i) => i >= boundaryIndex && e.id === entryId);
       },
     };
   }
@@ -201,7 +195,7 @@ export class WindowManager {
    */
   async manualCompact(): Promise<void> {
     if (this._session === null) {
-      throw new Error("WindowManager: session not bound yet");
+      throw new Error('WindowManager: session not bound yet');
     }
     await this._session.compact(compactionInstructions());
   }
@@ -238,9 +232,7 @@ export class WindowManager {
       const previousSummary = await this._chainPreviousSummary(event, ctx);
       const auth = await ctx.modelRegistry.getApiKeyAndHeaders(ctx.model);
       const model =
-        auth.ok && auth.baseUrl !== undefined
-          ? { ...ctx.model, baseUrl: auth.baseUrl }
-          : ctx.model;
+        auth.ok && auth.baseUrl !== undefined ? { ...ctx.model, baseUrl: auth.baseUrl } : ctx.model;
 
       const { text, usage } = await this._summarize(
         preparation.messagesToSummarize,
@@ -266,10 +258,7 @@ export class WindowManager {
       };
     } catch (err) {
       this._pendingDropped = null;
-      console.warn(
-        "Compaction: custom summary failed; falling back to SDK default",
-        err,
-      );
+      console.warn('Compaction: custom summary failed; falling back to SDK default', err);
     }
   }
 
@@ -303,7 +292,7 @@ export class WindowManager {
       try {
         await cb();
       } catch (err) {
-        console.warn("Compaction: boundary callback failed", err);
+        console.warn('Compaction: boundary callback failed', err);
       }
     }
   }
@@ -315,8 +304,8 @@ export class WindowManager {
   }): void {
     this._pendingDropped = null;
     console.warn(
-      `Compaction: epoch failed (${event.reason}${event.aborted ? ", aborted" : ""})` +
-        `${event.errorMessage ? `: ${event.errorMessage}` : ""}`,
+      `Compaction: epoch failed (${event.reason}${event.aborted ? ', aborted' : ''})` +
+        `${event.errorMessage ? `: ${event.errorMessage}` : ''}`,
     );
   }
 
@@ -364,10 +353,7 @@ export class WindowManager {
       this._chain = [consolidated.text];
       return consolidated.text;
     } catch (err) {
-      console.warn(
-        "Compaction: chain consolidation failed; passing the chain through",
-        err,
-      );
+      console.warn('Compaction: chain consolidation failed; passing the chain through', err);
       return prev;
     }
   }
@@ -383,16 +369,14 @@ export class WindowManager {
       );
     }
     if (ctx.model === undefined) {
-      throw new Error("Compaction: no model available for consolidation");
+      throw new Error('Compaction: no model available for consolidation');
     }
     return ctx.model;
   }
 
   /** chars/4 heuristic, same one the SDK's estimateTokens uses. */
   private _estimateTokens(summaries: string[]): number {
-    return Math.ceil(
-      summaries.reduce((n, s) => n + s.length, 0) / 4,
-    );
+    return Math.ceil(summaries.reduce((n, s) => n + s.length, 0) / 4);
   }
 
   // ------------------------------------------------------------------
@@ -404,13 +388,13 @@ export class WindowManager {
    * timestamp and broadcast window stats.
    */
   private _onSessionEvent(event: AgentSessionEvent): void {
-    if (event.type === "compaction_end" && !event.aborted && !event.willRetry) {
+    if (event.type === 'compaction_end' && !event.aborted && !event.willRetry) {
       this._lastCompactionAt = Date.now();
     }
 
     if (
-      event.type === "agent_settled" ||
-      (event.type === "compaction_end" && !event.aborted && !event.willRetry)
+      event.type === 'agent_settled' ||
+      (event.type === 'compaction_end' && !event.aborted && !event.willRetry)
     ) {
       this._broadcast();
     }

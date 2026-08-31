@@ -1,5 +1,5 @@
-import type { CaseExpectation, CheckResult } from "./types.js";
-import { GLOBAL_BANNED_PHRASES } from "./banned.js";
+import type { CaseExpectation, CheckResult } from './types.js';
+import { GLOBAL_BANNED_PHRASES } from './banned.js';
 
 /**
  * Find which of `phrases` occur in `text`. Case-insensitive, word-boundary
@@ -12,20 +12,20 @@ export function findPhrases(text: string, phrases: readonly string[]): string[] 
   const hits: string[] = [];
 
   for (const phrase of phrases) {
-    let pattern = "";
+    let pattern = '';
     for (const ch of phrase) {
       if (/[a-z0-9_]/.test(ch)) {
         pattern += ch;
       } else if (/\s/.test(ch)) {
-        pattern += "\\s+";
+        pattern += '\\s+';
       } else {
         pattern += `\\${ch}`;
       }
     }
 
-    const startBoundary = /^[a-z0-9_]/.test(phrase) ? "\\b" : "";
-    const endBoundary = /[a-z0-9_]$/.test(phrase) ? "\\b" : "";
-    const matcher = new RegExp(`${startBoundary}${pattern}${endBoundary}`, "i");
+    const startBoundary = /^[a-z0-9_]/.test(phrase) ? '\\b' : '';
+    const endBoundary = /[a-z0-9_]$/.test(phrase) ? '\\b' : '';
+    const matcher = new RegExp(`${startBoundary}${pattern}${endBoundary}`, 'i');
 
     if (matcher.test(text)) {
       hits.push(phrase);
@@ -49,44 +49,45 @@ export function runChecks(reply: string, expect: CaseExpectation): CheckResult[]
   const banned = [...GLOBAL_BANNED_PHRASES, ...(expect.bannedPhrases ?? [])];
   const bannedHits = findPhrases(text, banned);
   results.push({
-    name: "no-banned-phrases",
+    name: 'no-banned-phrases',
     pass: bannedHits.length === 0,
-    detail: bannedHits.length === 0 ? "" : `matched: ${bannedHits.join(", ")}`,
+    detail: bannedHits.length === 0 ? '' : `matched: ${bannedHits.join(', ')}`,
   });
 
   if (expect.mustMention !== undefined && expect.mustMention.length > 0) {
     const missing = expect.mustMention.filter((p) => !findPhrases(text, [p]).includes(p));
     results.push({
-      name: "must-mention",
+      name: 'must-mention',
       pass: missing.length === 0,
-      detail: missing.length === 0 ? "" : `missing: ${missing.join(", ")}`,
+      detail: missing.length === 0 ? '' : `missing: ${missing.join(', ')}`,
     });
   }
 
   if (expect.mustMentionAny !== undefined && expect.mustMentionAny.length > 0) {
     const hits = findPhrases(text, expect.mustMentionAny);
     results.push({
-      name: "must-mention-any",
+      name: 'must-mention-any',
       pass: hits.length > 0,
-      detail: hits.length > 0 ? `matched: ${hits[0]}` : `none of: ${expect.mustMentionAny.join(", ")}`,
+      detail:
+        hits.length > 0 ? `matched: ${hits[0]}` : `none of: ${expect.mustMentionAny.join(', ')}`,
     });
   }
 
   if (expect.mustNotMention !== undefined && expect.mustNotMention.length > 0) {
     const hits = findPhrases(text, expect.mustNotMention);
     results.push({
-      name: "must-not-mention",
+      name: 'must-not-mention',
       pass: hits.length === 0,
-      detail: hits.length === 0 ? "" : `matched: ${hits.join(", ")}`,
+      detail: hits.length === 0 ? '' : `matched: ${hits.join(', ')}`,
     });
   }
 
   if (expect.maxWords !== undefined) {
     const wordCount = text.length === 0 ? 0 : text.split(/\s+/).length;
     results.push({
-      name: "max-words",
+      name: 'max-words',
       pass: wordCount <= expect.maxWords,
-      detail: wordCount <= expect.maxWords ? "" : `${wordCount} words, limit ${expect.maxWords}`,
+      detail: wordCount <= expect.maxWords ? '' : `${wordCount} words, limit ${expect.maxWords}`,
     });
   }
 
@@ -96,18 +97,24 @@ export function runChecks(reply: string, expect: CaseExpectation): CheckResult[]
       .map((s) => s.trim())
       .filter((s) => /\w/.test(s));
     results.push({
-      name: "max-sentences",
+      name: 'max-sentences',
       pass: segments.length <= expect.maxSentences,
-      detail: segments.length <= expect.maxSentences ? "" : `${segments.length} sentences, limit ${expect.maxSentences}`,
+      detail:
+        segments.length <= expect.maxSentences
+          ? ''
+          : `${segments.length} sentences, limit ${expect.maxSentences}`,
     });
   }
 
   if (expect.maxQuestions !== undefined) {
     const questionCount = (text.match(/\?/g) ?? []).length;
     results.push({
-      name: "max-questions",
+      name: 'max-questions',
       pass: questionCount <= expect.maxQuestions,
-      detail: questionCount <= expect.maxQuestions ? "" : `${questionCount} questions, limit ${expect.maxQuestions}`,
+      detail:
+        questionCount <= expect.maxQuestions
+          ? ''
+          : `${questionCount} questions, limit ${expect.maxQuestions}`,
     });
   }
 
@@ -115,27 +122,33 @@ export function runChecks(reply: string, expect: CaseExpectation): CheckResult[]
     const questionSegments = text.match(/[^.!\n]*\?/g) ?? [];
     const menus = questionSegments.filter((q) => /,/.test(q) && /\bor\b/i.test(q));
     results.push({
-      name: "no-menu-questions",
+      name: 'no-menu-questions',
       pass: menus.length === 0,
-      detail: menus.length === 0 ? "" : `offering options inside a question: ${menus.map((m) => m.trim()).join(" | ")}`,
+      detail:
+        menus.length === 0
+          ? ''
+          : `offering options inside a question: ${menus.map((m) => m.trim()).join(' | ')}`,
     });
   }
 
   if (expect.forbidLists === true) {
     const listLines = text.match(/^[ \t]*(?:[-*+]|\d+[.)])[ \t]+\S/gm) ?? [];
     results.push({
-      name: "no-lists",
+      name: 'no-lists',
       pass: listLines.length < 2,
-      detail: listLines.length < 2 ? "" : `${listLines.length} list lines (markdown bullets or numbering)`,
+      detail:
+        listLines.length < 2
+          ? ''
+          : `${listLines.length} list lines (markdown bullets or numbering)`,
     });
   }
 
   if (expect.forbidCodeFences === true) {
     const fences = text.match(/```/g) ?? [];
     results.push({
-      name: "no-code-fences",
+      name: 'no-code-fences',
       pass: fences.length === 0,
-      detail: fences.length === 0 ? "" : "reply contains a fenced code block",
+      detail: fences.length === 0 ? '' : 'reply contains a fenced code block',
     });
   }
 

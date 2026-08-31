@@ -6,7 +6,7 @@ import type {
   Models,
   TextContent,
   Usage,
-} from "@earendil-works/pi-ai";
+} from '@earendil-works/pi-ai';
 
 /**
  * Custom instructions appended to the SDK's summarization prompt on every
@@ -18,26 +18,26 @@ import type {
  */
 export function compactionInstructions(): string {
   const preserve = [
-    "open threads and ongoing conversations",
-    "active projects and what state they are in",
-    "decisions made and the reasoning behind them",
-    "commitments the agent made (\"I'll check on that\", \"I'll follow up\")",
-    "people and roles under discussion",
-    "tone anchors: how the user talks, shared references, register preferences",
-  ].join(", ");
+    'open threads and ongoing conversations',
+    'active projects and what state they are in',
+    'decisions made and the reasoning behind them',
+    'commitments the agent made ("I\'ll check on that", "I\'ll follow up")',
+    'people and roles under discussion',
+    'tone anchors: how the user talks, shared references, register preferences',
+  ].join(', ');
 
   const drop = [
-    "tool call invocations and their outputs (bash logs, file reads, edit confirmations)",
-    "filler and small talk that carries no decisions or context",
-    "superseded back-and-forth resolved by a later exchange",
-    "old <memory-context> blocks (already in the memory index; keeping them double-counts)",
-  ].join(", ");
+    'tool call invocations and their outputs (bash logs, file reads, edit confirmations)',
+    'filler and small talk that carries no decisions or context',
+    'superseded back-and-forth resolved by a later exchange',
+    'old <memory-context> blocks (already in the memory index; keeping them double-counts)',
+  ].join(', ');
 
   return [
     `Preserve these in the summary: ${preserve}.`,
     `Drop these from the summary: ${drop}.`,
-    "Write the summary as structured sections (Goal, Progress, Key Decisions, Next Steps) so the next turn can pick up without reading the raw transcript.",
-  ].join("\n");
+    'Write the summary as structured sections (Goal, Progress, Key Decisions, Next Steps) so the next turn can pick up without reading the raw transcript.',
+  ].join('\n');
 }
 
 /**
@@ -87,7 +87,7 @@ export async function consolidateSummary(
   options?: { maxConsolidatedTokens?: number },
 ): Promise<ConsolidationResult> {
   if (summaries.length === 0) {
-    return { text: "", usage: zeroUsage() };
+    return { text: '', usage: zeroUsage() };
   }
 
   if (summaries.length === 1) {
@@ -97,29 +97,27 @@ export async function consolidateSummary(
   const budget = options?.maxConsolidatedTokens ?? 4_000;
 
   const systemPrompt = [
-    "You merge session summaries into one concise summary.",
-    "Keep all open threads, active projects, decisions made, commitments, people under discussion, and tone anchors.",
-    "Drop repetition, filler, tool spam, superseded back-and-forth, and old <memory-context> blocks.",
-    "Output the consolidated summary in the same structured format: ## Goal, ## Progress, ## Key Decisions, ## Next Steps.",
+    'You merge session summaries into one concise summary.',
+    'Keep all open threads, active projects, decisions made, commitments, people under discussion, and tone anchors.',
+    'Drop repetition, filler, tool spam, superseded back-and-forth, and old <memory-context> blocks.',
+    'Output the consolidated summary in the same structured format: ## Goal, ## Progress, ## Key Decisions, ## Next Steps.',
     `Stay within a soft limit of ${budget} tokens.`,
-  ].join("\n");
+  ].join('\n');
 
-  const numbered = summaries
-    .map((s, i) => `<summary index="${i}">\n${s}\n</summary>`)
-    .join("\n\n");
+  const numbered = summaries.map((s, i) => `<summary index="${i}">\n${s}\n</summary>`).join('\n\n');
 
   const userMessage = [
-    "Consolidate these summaries into one. Drop what is redundant or outdated; merge everything else.",
-    "",
+    'Consolidate these summaries into one. Drop what is redundant or outdated; merge everything else.',
+    '',
     numbered,
-  ].join("\n");
+  ].join('\n');
 
   const context: Context = {
     systemPrompt,
     messages: [
       {
-        role: "user",
-        content: [{ type: "text" as const, text: userMessage }],
+        role: 'user',
+        content: [{ type: 'text' as const, text: userMessage }],
         timestamp: Date.now(),
       },
     ],
@@ -129,24 +127,22 @@ export async function consolidateSummary(
   try {
     reply = await models.complete(model, context, { signal });
   } catch (err) {
-    throw new Error(
-      `consolidateSummary: provider call failed - ${(err as Error).message}`,
-    );
+    throw new Error(`consolidateSummary: provider call failed - ${(err as Error).message}`);
   }
 
-  if (reply.stopReason === "error" || reply.stopReason === "aborted") {
+  if (reply.stopReason === 'error' || reply.stopReason === 'aborted') {
     throw new Error(
-      `consolidateSummary: provider returned ${reply.stopReason} - ${reply.errorMessage ?? "no details"}`,
+      `consolidateSummary: provider returned ${reply.stopReason} - ${reply.errorMessage ?? 'no details'}`,
     );
   }
 
   const text = reply.content
-    .filter((part): part is TextContent => part.type === "text")
+    .filter((part): part is TextContent => part.type === 'text')
     .map((part) => part.text)
-    .join("");
+    .join('');
 
   if (!text.trim()) {
-    throw new Error("consolidateSummary: provider returned empty content");
+    throw new Error('consolidateSummary: provider returned empty content');
   }
 
   return { text, usage: reply.usage };

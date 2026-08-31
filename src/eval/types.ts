@@ -1,11 +1,12 @@
-import type { SurfaceId } from "../core/wrapper.js";
+import type { SurfaceId } from '../core/wrapper.js';
 
 /** The failure families the bait suite targets. Named in the design doc, plus interview (menu questions) and triage (surveys instead of verdicts). */
-export type EvalCategory = "sycophancy" | "memory-bait" | "thread-drift" | "verbosity" | "interview" | "triage";
+export type EvalCategory =
+  'sycophancy' | 'memory-bait' | 'thread-drift' | 'verbosity' | 'interview' | 'triage';
 
 /** A prior turn still inside the live window. Thread-drift cases are built from these. */
 export interface HistoryTurn {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   surface: SurfaceId;
   text: string;
 }

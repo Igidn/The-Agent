@@ -1,8 +1,8 @@
-import type { AgentSessionEvent } from "@earendil-works/pi-coding-agent";
-import { SessionManager } from "./session.js";
-import { type SurfaceId, wrapMessage } from "./wrapper.js";
+import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
+import { SessionManager } from './session.js';
+import { type SurfaceId, wrapMessage } from './wrapper.js';
 
-export type QueueState = "idle" | "streaming";
+export type QueueState = 'idle' | 'streaming';
 
 export interface SurfaceQueueInfo {
   /** Number of messages waiting from this surface. */
@@ -18,8 +18,7 @@ export interface QueueStatus {
   surfaces: Record<SurfaceId, SurfaceQueueInfo>;
 }
 
-
-const ALL_SURFACES: SurfaceId[] = ["discord", "launcher", "dashboard", "cli"];
+const ALL_SURFACES: SurfaceId[] = ['discord', 'launcher', 'dashboard', 'cli'];
 
 interface DebounceState {
   timer: ReturnType<typeof setTimeout>;
@@ -27,13 +26,11 @@ interface DebounceState {
   surface: SurfaceId;
 }
 
-
 interface QueuedMessage {
   text: string;
   surface: SurfaceId;
   timestamp: number;
 }
-
 
 /**
  * Owns the inbound message queue for the single session.
@@ -67,7 +64,6 @@ export class MessageQueue {
   /** Whether the session is known to be idle. Default true until first message. */
   private settled = true;
 
-
   /**
    * Debounce window in milliseconds.
    * Messages from the same surface arriving within this window are coalesced.
@@ -86,13 +82,10 @@ export class MessageQueue {
    */
   start(): void {
     if (this.unsubEvent) return;
-    this.unsubEvent = this.sessionManager.session.subscribe(
-      (event: AgentSessionEvent) => {
-        this._onSessionEvent(event);
-      },
-    );
+    this.unsubEvent = this.sessionManager.session.subscribe((event: AgentSessionEvent) => {
+      this._onSessionEvent(event);
+    });
   }
-
 
   /**
    * Enqueue a message from a surface.
@@ -109,13 +102,9 @@ export class MessageQueue {
     if (existing) {
       clearTimeout(existing.timer);
       existing.texts.push(trimmed);
-      existing.timer = setTimeout(
-        () => this._flushDebounce(existing),
-        this.debounceWindowMs,
-      );
+      existing.timer = setTimeout(() => this._flushDebounce(existing), this.debounceWindowMs);
       return;
     }
-
 
     const currentlyStreaming = !this.settled;
 
@@ -140,7 +129,7 @@ export class MessageQueue {
    * window is currently open for that surface.
    */
   getStatus(): QueueStatus {
-    const state: QueueState = this.settled ? "idle" : "streaming";
+    const state: QueueState = this.settled ? 'idle' : 'streaming';
     const surfaces: Record<SurfaceId, SurfaceQueueInfo> = {} as Record<SurfaceId, SurfaceQueueInfo>;
     for (const s of ALL_SURFACES) {
       surfaces[s] = { pending: 0 };
@@ -175,7 +164,6 @@ export class MessageQueue {
     this.settled = true;
   }
 
-
   private _startDebounce(surface: SurfaceId, text: string): void {
     const state: DebounceState = {
       timer: setTimeout(() => this._flushDebounce(state), this.debounceWindowMs),
@@ -187,7 +175,7 @@ export class MessageQueue {
 
   private _flushDebounce(state: DebounceState): void {
     this.debounceStates.delete(state.surface);
-    const combined = state.texts.join("\n");
+    const combined = state.texts.join('\n');
 
     // Don't process an empty coalesced payload.
     if (!combined.trim()) return;
@@ -197,13 +185,9 @@ export class MessageQueue {
     this._dispatch(combined, state.surface);
   }
 
-
   private _enqueuePending(text: string, surface: SurfaceId): void {
     this.pendingQueue.push({ text, surface, timestamp: Date.now() });
-    this.pendingCounts.set(
-      surface,
-      (this.pendingCounts.get(surface) ?? 0) + 1,
-    );
+    this.pendingCounts.set(surface, (this.pendingCounts.get(surface) ?? 0) + 1);
   }
 
   /**
@@ -229,7 +213,6 @@ export class MessageQueue {
       this._dispatch(next.text, next.surface);
     }
   }
-
 
   /**
    * Core dispatch: apply the three-rule decision and call into the
@@ -258,9 +241,8 @@ export class MessageQueue {
     // else: streaming but no active surface set → treat as idle (shouldn't happen).
   }
 
-
   private _onSessionEvent(event: AgentSessionEvent): void {
-    if (event.type === "agent_settled") {
+    if (event.type === 'agent_settled') {
       this.settled = true;
       this.activeSurface = null;
 

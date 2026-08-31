@@ -1,14 +1,11 @@
-import { test } from "node:test";
-import assert from "node:assert/strict";
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
-import type {
-  AgentSession,
-  AgentSessionEvent,
-} from "@earendil-works/pi-coding-agent";
-import type { Api, Model, Models } from "@earendil-works/pi-ai";
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import type { AgentMessage } from '@earendil-works/pi-agent-core';
+import type { AgentSession, AgentSessionEvent } from '@earendil-works/pi-coding-agent';
+import type { Api, Model, Models } from '@earendil-works/pi-ai';
 
-import type { ExtractedFact, MemoryItem, MemoryStore } from "./types.js";
-import { TurnExtractor, type ExtractFactsFn } from "./turn-extractor.js";
+import type { ExtractedFact, MemoryItem, MemoryStore } from './types.js';
+import { TurnExtractor, type ExtractFactsFn } from './turn-extractor.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -23,10 +20,7 @@ interface Entry {
 }
 
 /** Minimal session double for testing. */
-function fakeSession(
-  messages: AgentMessage[],
-  entries: Entry[] = [],
-): AgentSession {
+function fakeSession(messages: AgentMessage[], entries: Entry[] = []): AgentSession {
   return {
     messages,
     sessionManager: {
@@ -73,25 +67,23 @@ class ControllableSession {
 }
 
 /** Fake extract function that returns canned facts. */
-function fakeExtract(
-  facts: ExtractedFact[],
-): ExtractFactsFn {
+function fakeExtract(facts: ExtractedFact[]): ExtractFactsFn {
   return async () => facts;
 }
 
 /** Make an AgentMessage-like user message. */
 function userMsg(text: string): AgentMessage {
   return {
-    role: "user",
-    content: [{ type: "text", text }],
+    role: 'user',
+    content: [{ type: 'text', text }],
   } as unknown as AgentMessage;
 }
 
 /** Make an AgentMessage-like assistant message. */
 function assistantMsg(text: string): AgentMessage {
   return {
-    role: "assistant",
-    content: [{ type: "text", text }],
+    role: 'assistant',
+    content: [{ type: 'text', text }],
   } as unknown as AgentMessage;
 }
 
@@ -119,16 +111,16 @@ const UNUSED_MODEL = undefined as unknown as Model<Api>;
 const UNUSED_MODELS = undefined as unknown as Models;
 
 function cheapModel(): Model<Api> {
-  return { provider: "openai", id: "gpt-4o-mini" } as unknown as Model<Api>;
+  return { provider: 'openai', id: 'gpt-4o-mini' } as unknown as Model<Api>;
 }
 
 function cheapModels(): Models {
   return {
     async complete() {
       return {
-        role: "assistant",
-        content: [{ type: "text", text: "[]" }],
-        stopReason: "stop",
+        role: 'assistant',
+        content: [{ type: 'text', text: '[]' }],
+        stopReason: 'stop',
       };
     },
   } as unknown as Models;
@@ -138,7 +130,7 @@ function cheapModels(): Models {
 // Tests
 // ---------------------------------------------------------------------------
 
-test("bindSession subscribes to session events", () => {
+test('bindSession subscribes to session events', () => {
   const store = recordingStore();
   const extract = fakeExtract([]);
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
@@ -152,22 +144,22 @@ test("bindSession subscribes to session events", () => {
   extractor.dispose();
 });
 
-test("agent_settled with new messages extracts facts and persists them", async () => {
+test('agent_settled with new messages extracts facts and persists them', async () => {
   const store = recordingStore();
   const extract = fakeExtract([
-    { content: "User likes TypeScript", tags: ["preference"], importance: 6 },
+    { content: 'User likes TypeScript', tags: ['preference'], importance: 6 },
   ]);
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
   const session = new ControllableSession(
-    [userMsg("I like TypeScript")],
-    [{ type: "message", id: "entry_1", parentId: null, timestamp: "2024-01-01T00:00:00Z" }],
+    [userMsg('I like TypeScript')],
+    [{ type: 'message', id: 'entry_1', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
   );
   extractor.bindSession(session.asSession());
 
   // Simulate a turn: add an assistant message and emit agent_settled
-  session.messages.push(assistantMsg("Got it!"));
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.messages.push(assistantMsg('Got it!'));
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
 
   // Allow the fire-and-forget promise to settle
   await new Promise((r) => setTimeout(r, 10));
@@ -175,15 +167,15 @@ test("agent_settled with new messages extracts facts and persists them", async (
   // The extracted fact should have been ingested with sourceEntryId = last entry id
   assert.equal(store.ingested.length, 1);
   const call = store.ingested[0] as Record<string, unknown>;
-  assert.equal(call.content, "User likes TypeScript");
-  assert.deepEqual(call.tags, ["preference"]);
+  assert.equal(call.content, 'User likes TypeScript');
+  assert.deepEqual(call.tags, ['preference']);
   assert.equal(call.importance, 6);
-  assert.equal(call.sourceEntryId, "entry_1");
+  assert.equal(call.sourceEntryId, 'entry_1');
 
   extractor.dispose();
 });
 
-test("agent_settled with no new messages does nothing", async () => {
+test('agent_settled with no new messages does nothing', async () => {
   let extractCalled = false;
   const extract: ExtractFactsFn = async () => {
     extractCalled = true;
@@ -192,11 +184,11 @@ test("agent_settled with no new messages does nothing", async () => {
   const store = recordingStore();
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
-  const session = new ControllableSession([userMsg("hi")]);
+  const session = new ControllableSession([userMsg('hi')]);
   extractor.bindSession(session.asSession());
 
   // Emit agent_settled with the same messages (no new ones)
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
 
   // extract should not have been called
@@ -206,19 +198,19 @@ test("agent_settled with no new messages does nothing", async () => {
   extractor.dispose();
 });
 
-test("extraction of empty facts does nothing", async () => {
+test('extraction of empty facts does nothing', async () => {
   const store = recordingStore();
   const extract = fakeExtract([]);
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
   const session = new ControllableSession(
-    [userMsg("hello")],
-    [{ type: "message", id: "entry_1", parentId: null, timestamp: "2024-01-01T00:00:00Z" }],
+    [userMsg('hello')],
+    [{ type: 'message', id: 'entry_1', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
   );
   extractor.bindSession(session.asSession());
 
-  session.messages.push(assistantMsg("Hi there!"));
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.messages.push(assistantMsg('Hi there!'));
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
 
   assert.equal(store.ingested.length, 0);
@@ -226,20 +218,23 @@ test("extraction of empty facts does nothing", async () => {
   extractor.dispose();
 });
 
-test("multiple turns accumulate facts across them", async () => {
+test('multiple turns accumulate facts across them', async () => {
   const store = recordingStore();
   let callCount = 0;
   const extract: ExtractFactsFn = async (msgs) => {
     callCount++;
-    const turnMsgs = msgs.filter((m) => m.role === "user");
+    const turnMsgs = msgs.filter((m) => m.role === 'user');
     return turnMsgs.map((m) => {
       const raw = m as unknown as { content?: Array<{ type?: string; text?: string }> };
       const text = Array.isArray(raw.content)
-        ? raw.content.filter((c) => c.type === "text").map((c) => c.text).join(" ")
-        : String(raw.content ?? "");
+        ? raw.content
+            .filter((c) => c.type === 'text')
+            .map((c) => c.text)
+            .join(' ')
+        : String(raw.content ?? '');
       return {
         content: `Fact from: ${text}`,
-        tags: ["event"] as const,
+        tags: ['event'] as const,
         importance: 5,
       };
     });
@@ -250,115 +245,110 @@ test("multiple turns accumulate facts across them", async () => {
   const session = new ControllableSession(
     [],
     [
-      { type: "message", id: "entry_1", parentId: null, timestamp: "2024-01-01T00:00:00Z" },
-      { type: "message", id: "entry_2", parentId: null, timestamp: "2024-01-01T00:00:01Z" },
+      { type: 'message', id: 'entry_1', parentId: null, timestamp: '2024-01-01T00:00:00Z' },
+      { type: 'message', id: 'entry_2', parentId: null, timestamp: '2024-01-01T00:00:01Z' },
     ],
   );
   extractor.bindSession(session.asSession());
 
   // Turn 1
-  session.messages.push(userMsg("First fact"));
-  session.messages.push(assistantMsg("OK"));
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.messages.push(userMsg('First fact'));
+  session.messages.push(assistantMsg('OK'));
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
   assert.equal(callCount, 1);
   assert.equal(store.ingested.length, 1);
-  assert.equal(
-    (store.ingested[0] as Record<string, unknown>).sourceEntryId,
-    "entry_2",
-  );
+  assert.equal((store.ingested[0] as Record<string, unknown>).sourceEntryId, 'entry_2');
 
   // Turn 2
-  session.messages.push(userMsg("Second fact"));
-  session.messages.push(assistantMsg("Done"));
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.messages.push(userMsg('Second fact'));
+  session.messages.push(assistantMsg('Done'));
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
   assert.equal(callCount, 2);
   assert.equal(store.ingested.length, 2);
-  assert.equal(
-    (store.ingested[1] as Record<string, unknown>).content,
-    "Fact from: Second fact",
-  );
+  assert.equal((store.ingested[1] as Record<string, unknown>).content, 'Fact from: Second fact');
 
   extractor.dispose();
 });
 
-test("dispose unsubscribes and stops processing", async () => {
+test('dispose unsubscribes and stops processing', async () => {
   const store = recordingStore();
   const extract = fakeExtract([
-    { content: "Should not be stored", tags: ["event"], importance: 3 },
+    { content: 'Should not be stored', tags: ['event'], importance: 3 },
   ]);
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
-  const session = new ControllableSession([userMsg("test")], [
-    { type: "message", id: "e1", parentId: null, timestamp: "2024-01-01T00:00:00Z" },
-  ]);
+  const session = new ControllableSession(
+    [userMsg('test')],
+    [{ type: 'message', id: 'e1', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
+  );
   extractor.bindSession(session.asSession());
 
   // Dispose before the turn completes.
   extractor.dispose();
 
-  session.messages.push(assistantMsg("reply"));
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.messages.push(assistantMsg('reply'));
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
 
   assert.equal(store.ingested.length, 0);
 });
 
-test("bindSession can be called multiple times (re-subscribe)", async () => {
+test('bindSession can be called multiple times (re-subscribe)', async () => {
   const store = recordingStore();
-  const extract = fakeExtract([
-    { content: "From second session", tags: ["event"], importance: 5 },
-  ]);
+  const extract = fakeExtract([{ content: 'From second session', tags: ['event'], importance: 5 }]);
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
-  const session1 = new ControllableSession([], [
-    { type: "message", id: "s1", parentId: null, timestamp: "2024-01-01T00:00:00Z" },
-  ]);
+  const session1 = new ControllableSession(
+    [],
+    [{ type: 'message', id: 's1', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
+  );
   extractor.bindSession(session1.asSession());
   const listener1 = session1.listener;
 
-  const session2 = new ControllableSession([], [
-    { type: "message", id: "s2", parentId: null, timestamp: "2024-01-01T00:00:00Z" },
-  ]);
+  const session2 = new ControllableSession(
+    [],
+    [{ type: 'message', id: 's2', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
+  );
   extractor.bindSession(session2.asSession());
 
   // After re-binding, session1 should no longer trigger extraction.
-  session1.messages.push(assistantMsg("reply"));
-  session1.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session1.messages.push(assistantMsg('reply'));
+  session1.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
   assert.equal(store.ingested.length, 0);
 
   // session2 should trigger extraction.
-  session2.messages.push(assistantMsg("reply"));
-  session2.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session2.messages.push(assistantMsg('reply'));
+  session2.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
   assert.equal(store.ingested.length, 1);
 
   extractor.dispose();
 });
 
-test("store write failure does not crash the extractor", async () => {
+test('store write failure does not crash the extractor', async () => {
   const store = recordingStore();
   // Override upsert to throw.
   store.upsert = async () => {
-    throw new Error("disk full");
+    throw new Error('disk full');
   };
 
   const extract = fakeExtract([
-    { content: "This will fail to write", tags: ["event"], importance: 3 },
+    { content: 'This will fail to write', tags: ['event'], importance: 3 },
   ]);
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
   const session = new ControllableSession(
-    [userMsg("test")],
-    [{ type: "message", id: "e1", parentId: null, timestamp: "2024-01-01T00:00:00Z" }],
+    [userMsg('test')],
+    [{ type: 'message', id: 'e1', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
   );
   extractor.bindSession(session.asSession());
 
-  session.messages.push(assistantMsg("reply"));
+  session.messages.push(assistantMsg('reply'));
   // Must not throw
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
 
   // Extractor is still usable after failure
@@ -367,23 +357,23 @@ test("store write failure does not crash the extractor", async () => {
   extractor.dispose();
 });
 
-test("extract function failure does not crash the extractor", async () => {
+test('extract function failure does not crash the extractor', async () => {
   const store = recordingStore();
   const extract: ExtractFactsFn = async () => {
-    throw new Error("LLM unavailable");
+    throw new Error('LLM unavailable');
   };
 
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
   const session = new ControllableSession(
-    [userMsg("test")],
-    [{ type: "message", id: "e1", parentId: null, timestamp: "2024-01-01T00:00:00Z" }],
+    [userMsg('test')],
+    [{ type: 'message', id: 'e1', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
   );
   extractor.bindSession(session.asSession());
 
-  session.messages.push(assistantMsg("reply"));
+  session.messages.push(assistantMsg('reply'));
   // Must not throw
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
 
   assert.equal(store.ingested.length, 0);
@@ -391,39 +381,32 @@ test("extract function failure does not crash the extractor", async () => {
   extractor.dispose();
 });
 
-test("sourceEntryId is null when entries are empty", async () => {
+test('sourceEntryId is null when entries are empty', async () => {
   const store = recordingStore();
-  const extract = fakeExtract([
-    { content: "Orphan fact", tags: ["event"], importance: 3 },
-  ]);
+  const extract = fakeExtract([{ content: 'Orphan fact', tags: ['event'], importance: 3 }]);
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
-  const session = new ControllableSession([userMsg("test")], []); // no entries
+  const session = new ControllableSession([userMsg('test')], []); // no entries
   extractor.bindSession(session.asSession());
 
-  session.messages.push(assistantMsg("reply"));
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.messages.push(assistantMsg('reply'));
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
 
   assert.equal(store.ingested.length, 1);
-  assert.equal(
-    (store.ingested[0] as Record<string, unknown>).sourceEntryId,
-    null,
-  );
+  assert.equal((store.ingested[0] as Record<string, unknown>).sourceEntryId, null);
 
   extractor.dispose();
 });
 
-test("re-bindSession after dispose works", async () => {
+test('re-bindSession after dispose works', async () => {
   const store = recordingStore();
-  const extract = fakeExtract([
-    { content: "After re-bind", tags: ["event"], importance: 4 },
-  ]);
+  const extract = fakeExtract([{ content: 'After re-bind', tags: ['event'], importance: 4 }]);
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
   const session = new ControllableSession(
-    [userMsg("hi")],
-    [{ type: "message", id: "e1", parentId: null, timestamp: "2024-01-01T00:00:00Z" }],
+    [userMsg('hi')],
+    [{ type: 'message', id: 'e1', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
   );
 
   extractor.bindSession(session.asSession());
@@ -431,25 +414,22 @@ test("re-bindSession after dispose works", async () => {
 
   // Re-bind should work after dispose
   const session2 = new ControllableSession(
-    [userMsg("again")],
-    [{ type: "message", id: "e2", parentId: null, timestamp: "2024-01-01T00:00:00Z" }],
+    [userMsg('again')],
+    [{ type: 'message', id: 'e2', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
   );
   extractor.bindSession(session2.asSession());
 
-  session2.messages.push(assistantMsg("ok"));
-  session2.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session2.messages.push(assistantMsg('ok'));
+  session2.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
 
   assert.equal(store.ingested.length, 1);
-  assert.equal(
-    (store.ingested[0] as Record<string, unknown>).content,
-    "After re-bind",
-  );
+  assert.equal((store.ingested[0] as Record<string, unknown>).content, 'After re-bind');
 
   extractor.dispose();
 });
 
-test("constructor accepts real extractFns signature", () => {
+test('constructor accepts real extractFns signature', () => {
   // Verify the constructor accepts the real extractFacts export shape
   const store = recordingStore();
   const extract: ExtractFactsFn = async (msgs, model, models, signal) => {
@@ -463,48 +443,33 @@ test("constructor accepts real extractFns signature", () => {
   extractor.dispose();
 });
 
-test("multiple facts from one turn are all ingested", async () => {
+test('multiple facts from one turn are all ingested', async () => {
   const store = recordingStore();
   const facts: ExtractedFact[] = [
-    { content: "Fact one", tags: ["preference"], importance: 5 },
-    { content: "Fact two", tags: ["event"], importance: 6 },
-    { content: "Fact three", tags: ["person"], importance: 7 },
+    { content: 'Fact one', tags: ['preference'], importance: 5 },
+    { content: 'Fact two', tags: ['event'], importance: 6 },
+    { content: 'Fact three', tags: ['person'], importance: 7 },
   ];
   const extract = fakeExtract(facts);
   const extractor = new TurnExtractor(store, extract, UNUSED_MODEL, UNUSED_MODELS);
 
   const session = new ControllableSession(
-    [userMsg("multi-fact turn")],
-    [{ type: "message", id: "entry_multi", parentId: null, timestamp: "2024-01-01T00:00:00Z" }],
+    [userMsg('multi-fact turn')],
+    [{ type: 'message', id: 'entry_multi', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
   );
   extractor.bindSession(session.asSession());
 
-  session.messages.push(assistantMsg("done"));
-  session.emit({ type: "agent_settled" } as AgentSessionEvent);
+  session.messages.push(assistantMsg('done'));
+  session.emit({ type: 'agent_settled' } as AgentSessionEvent);
   await new Promise((r) => setTimeout(r, 10));
 
   assert.equal(store.ingested.length, 3);
-  assert.equal(
-    (store.ingested[0] as Record<string, unknown>).content,
-    "Fact one",
-  );
-  assert.equal(
-    (store.ingested[1] as Record<string, unknown>).content,
-    "Fact two",
-  );
-  assert.equal(
-    (store.ingested[2] as Record<string, unknown>).content,
-    "Fact three",
-  );
+  assert.equal((store.ingested[0] as Record<string, unknown>).content, 'Fact one');
+  assert.equal((store.ingested[1] as Record<string, unknown>).content, 'Fact two');
+  assert.equal((store.ingested[2] as Record<string, unknown>).content, 'Fact three');
   // All share the same sourceEntryId
-  assert.equal(
-    (store.ingested[0] as Record<string, unknown>).sourceEntryId,
-    "entry_multi",
-  );
-  assert.equal(
-    (store.ingested[1] as Record<string, unknown>).sourceEntryId,
-    "entry_multi",
-  );
+  assert.equal((store.ingested[0] as Record<string, unknown>).sourceEntryId, 'entry_multi');
+  assert.equal((store.ingested[1] as Record<string, unknown>).sourceEntryId, 'entry_multi');
 
   extractor.dispose();
 });

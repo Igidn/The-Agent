@@ -1,8 +1,8 @@
-import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
-import Database, { type Statement } from "better-sqlite3";
-import { load as loadVec } from "sqlite-vec";
+import { randomUUID } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
+import Database, { type Statement } from 'better-sqlite3';
+import { load as loadVec } from 'sqlite-vec';
 import type {
   EmbeddingProvider,
   MemoryItem,
@@ -10,7 +10,7 @@ import type {
   MemoryTag,
   MemoryTier,
   ScoredItem,
-} from "./types.js";
+} from './types.js';
 
 /** Columns returned by every item-fetching SQL query in this class. */
 interface RowShape {
@@ -27,7 +27,7 @@ interface RowShape {
 
 // The published @types/better-sqlite3 (v9.6.0) is missing safeIntegers
 // from the constructor Options.  Add it via module augmentation.
-declare module "better-sqlite3" {
+declare module 'better-sqlite3' {
   interface Options {
     safeIntegers?: boolean;
   }
@@ -62,9 +62,7 @@ export class SqliteMemoryStore implements MemoryStore {
     this.initSchema();
 
     // --- prepared statements ---
-    this.stmtGet = this.db.prepare(
-      "SELECT * FROM items WHERE uuid = ?",
-    );
+    this.stmtGet = this.db.prepare('SELECT * FROM items WHERE uuid = ?');
 
     this.stmtInsert = this.db.prepare(`
       INSERT INTO items (uuid, tier, content, tags, entities, importance, sourceEntryId, createdAt, updatedAt)
@@ -78,11 +76,9 @@ export class SqliteMemoryStore implements MemoryStore {
       WHERE uuid = @uuid
     `);
 
-    this.stmtDelete = this.db.prepare("DELETE FROM items WHERE uuid = ?");
+    this.stmtDelete = this.db.prepare('DELETE FROM items WHERE uuid = ?');
 
-    this.stmtDeleteVec = this.db.prepare(
-      "DELETE FROM vec_items WHERE rowid = ?",
-    );
+    this.stmtDeleteVec = this.db.prepare('DELETE FROM vec_items WHERE rowid = ?');
   }
 
   // ---- schema ----
@@ -158,7 +154,7 @@ export class SqliteMemoryStore implements MemoryStore {
   // ---- MemoryStore implementation ----
 
   async upsert(
-    item: Omit<MemoryItem, "id" | "createdAt" | "updatedAt"> & { id?: string },
+    item: Omit<MemoryItem, 'id' | 'createdAt' | 'updatedAt'> & { id?: string },
   ): Promise<MemoryItem> {
     const now = new Date().toISOString();
 
@@ -219,21 +215,19 @@ export class SqliteMemoryStore implements MemoryStore {
     return this.rowToItem(row as unknown as RowShape);
   }
 
-  async list(
-    opts?: {
-      tier?: MemoryTier;
-      tags?: MemoryTag[];
-      limit?: number;
-      offset?: number;
-    },
-  ): Promise<MemoryItem[]> {
+  async list(opts?: {
+    tier?: MemoryTier;
+    tags?: MemoryTag[];
+    limit?: number;
+    offset?: number;
+  }): Promise<MemoryItem[]> {
     const limit = opts?.limit ?? 100;
     const offset = opts?.offset ?? 0;
     const conditions: string[] = [];
     const params: Record<string, unknown> = { limit, offset };
 
     if (opts?.tier) {
-      conditions.push("tier = @tier");
+      conditions.push('tier = @tier');
       params.tier = opts.tier;
     }
 
@@ -242,14 +236,14 @@ export class SqliteMemoryStore implements MemoryStore {
       // one of the requested tags.  Uses json_each to unpack and match.
       const placeholders = opts.tags.map((_, i) => `@tag${i}`);
       conditions.push(
-        `EXISTS (SELECT 1 FROM json_each(tags) WHERE value IN (${placeholders.join(",")}))`,
+        `EXISTS (SELECT 1 FROM json_each(tags) WHERE value IN (${placeholders.join(',')}))`,
       );
       opts.tags.forEach((tag, i) => {
         params[`tag${i}`] = tag;
       });
     }
 
-    const where = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const sql = `SELECT * FROM items ${where} ORDER BY id DESC LIMIT @limit OFFSET @offset`;
     const rows = this.db.prepare(sql).all(params) as Record<string, unknown>[];
 
@@ -271,11 +265,7 @@ export class SqliteMemoryStore implements MemoryStore {
    * filtering. Results include the cosine distance converted to similarity
    * (1 - distance) so callers can re-score with their own blend.
    */
-  async search(
-    text: string,
-    k: number,
-    tiers?: MemoryTier[],
-  ): Promise<ScoredItem[]> {
+  async search(text: string, k: number, tiers?: MemoryTier[]): Promise<ScoredItem[]> {
     if (k < 1) return [];
 
     const [queryVec] = await this.embeddings.embed([text]);
@@ -291,7 +281,7 @@ export class SqliteMemoryStore implements MemoryStore {
         params[`tier${i}`] = t;
       });
     }
-    const tierSql = tierFilter.length > 0 ? `AND i.tier IN (${tierFilter.join(",")})` : "";
+    const tierSql = tierFilter.length > 0 ? `AND i.tier IN (${tierFilter.join(',')})` : '';
 
     const sql = `
       SELECT v.rowid, v.distance, i.uuid, i.tier, i.content, i.tags, i.entities,
@@ -329,7 +319,7 @@ export class SqliteMemoryStore implements MemoryStore {
     const [vec] = await this.embeddings.embed([content]);
     this.stmtDeleteVec.run(BigInt(rowid));
     this.db
-      .prepare("INSERT INTO vec_items(rowid, embedding) VALUES (?, ?)")
+      .prepare('INSERT INTO vec_items(rowid, embedding) VALUES (?, ?)')
       .run(BigInt(rowid), new Float32Array(vec));
   }
 }

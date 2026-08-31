@@ -6,8 +6,8 @@ import type {
   Model,
   Models,
   TextContent,
-} from "@earendil-works/pi-ai";
-import type { MemoryItem, MemoryStore, MemoryTag } from "./types.js";
+} from '@earendil-works/pi-ai';
+import type { MemoryItem, MemoryStore, MemoryTag } from './types.js';
 
 /**
  * System prompt for the profile consolidation pass.
@@ -16,39 +16,39 @@ import type { MemoryItem, MemoryStore, MemoryTag } from "./types.js";
  * episodic facts into a concise, deduplicated set of profile statements.
  */
 const CONSOLIDATE_SYSTEM_PROMPT = [
-  "You consolidate user profile information from conversation records into a concise, non-redundant set of profile statements.",
-  "",
-  "You are given:",
-  "- Existing profile items (current knowledge about the user).",
-  "- Recent episodic facts (things learned from recent conversations).",
-  "",
-  "Return ONLY a valid JSON array of profile statement objects. No markdown fences, no commentary.",
-  "",
-  "Each object must have:",
+  'You consolidate user profile information from conversation records into a concise, non-redundant set of profile statements.',
+  '',
+  'You are given:',
+  '- Existing profile items (current knowledge about the user).',
+  '- Recent episodic facts (things learned from recent conversations).',
+  '',
+  'Return ONLY a valid JSON array of profile statement objects. No markdown fences, no commentary.',
+  '',
+  'Each object must have:',
   '- "content": a concise factual statement about the user (one sentence).',
   '- "tags": array of one or more of "preference", "person", "event", "project", "correction", "summary".',
   '- "importance": integer 0–10 (10 = most important to remember).',
-  "",
-  "Rules:",
-  "- Merge duplicate or overlapping information into a single statement.",
-  "- Prefer the most recent information when there is a conflict.",
-  "- Drop outdated facts that are superseded by newer information.",
-  "- Keep the overall set small (dozens of items, not hundreds).",
-  "- Include both stable traits (preferences, personal details) and active context (current projects, recent events).",
-  "- Each statement should be independently meaningful out of context.",
-  "",
-  "Example:",
+  '',
+  'Rules:',
+  '- Merge duplicate or overlapping information into a single statement.',
+  '- Prefer the most recent information when there is a conflict.',
+  '- Drop outdated facts that are superseded by newer information.',
+  '- Keep the overall set small (dozens of items, not hundreds).',
+  '- Include both stable traits (preferences, personal details) and active context (current projects, recent events).',
+  '- Each statement should be independently meaningful out of context.',
+  '',
+  'Example:',
   '[{"content": "User prefers concise responses with bullet points", "tags": ["preference"], "importance": 7}]',
-].join("\n");
+].join('\n');
 
 /** Tags that can contribute to the profile tier. */
 const PROFILE_RELEVANT_TAGS: MemoryTag[] = [
-  "preference",
-  "person",
-  "project",
-  "event",
-  "correction",
-  "summary",
+  'preference',
+  'person',
+  'project',
+  'event',
+  'correction',
+  'summary',
 ];
 
 /**
@@ -77,9 +77,9 @@ export async function consolidateProfile(
   signal?: AbortSignal,
 ): Promise<MemoryItem[]> {
   const [existingProfile, recentEpisodic] = await Promise.all([
-    store.list({ tier: "profile" }),
+    store.list({ tier: 'profile' }),
     store.list({
-      tier: "episodic",
+      tier: 'episodic',
       tags: PROFILE_RELEVANT_TAGS,
       limit: 200,
     }),
@@ -90,33 +90,33 @@ export async function consolidateProfile(
       ? existingProfile
           .map(
             (item, i) =>
-              `[${i}] tags=${item.tags.join(",")} importance=${item.importance}\n${item.content}`,
+              `[${i}] tags=${item.tags.join(',')} importance=${item.importance}\n${item.content}`,
           )
-          .join("\n\n")
-      : "(none)";
+          .join('\n\n')
+      : '(none)';
 
   const episodicSection =
     recentEpisodic.length > 0
       ? recentEpisodic
           .map(
             (item, i) =>
-              `[${i}] tags=${item.tags.join(",")} importance=${item.importance}\n${item.content}`,
+              `[${i}] tags=${item.tags.join(',')} importance=${item.importance}\n${item.content}`,
           )
-          .join("\n\n")
-      : "(none)";
+          .join('\n\n')
+      : '(none)';
 
   const userMessage: Message = {
-    role: "user" as const,
+    role: 'user' as const,
     content: [
       {
-        type: "text" as const,
+        type: 'text' as const,
         text: [
-          "Existing profile items:",
+          'Existing profile items:',
           existingSection,
-          "",
-          "Recent episodic facts:",
+          '',
+          'Recent episodic facts:',
           episodicSection,
-        ].join("\n"),
+        ].join('\n'),
       },
     ],
     timestamp: Date.now(),
@@ -131,35 +131,31 @@ export async function consolidateProfile(
   try {
     reply = await models.complete(model, context, { signal });
   } catch (err) {
-    throw new Error(
-      `consolidateProfile: provider call failed - ${(err as Error).message}`,
-    );
+    throw new Error(`consolidateProfile: provider call failed - ${(err as Error).message}`);
   }
 
-  if (reply.stopReason === "error" || reply.stopReason === "aborted") {
+  if (reply.stopReason === 'error' || reply.stopReason === 'aborted') {
     throw new Error(
-      `consolidateProfile: provider returned ${reply.stopReason} - ${reply.errorMessage ?? "no details"}`,
+      `consolidateProfile: provider returned ${reply.stopReason} - ${reply.errorMessage ?? 'no details'}`,
     );
   }
 
   const text = reply.content
-    .filter((part): part is TextContent => part.type === "text")
+    .filter((part): part is TextContent => part.type === 'text')
     .map((part) => part.text)
-    .join("");
+    .join('');
 
   const profileStatements = parseProfileStatements(text);
   if (profileStatements.length === 0) {
     return existingProfile;
   }
 
-  await Promise.all(
-    existingProfile.map((item) => store.delete(item.id)),
-  );
+  await Promise.all(existingProfile.map((item) => store.delete(item.id)));
 
   const newItems: MemoryItem[] = [];
   for (const stmt of profileStatements) {
     const item = await store.upsert({
-      tier: "profile",
+      tier: 'profile',
       content: stmt.content,
       tags: stmt.tags,
       importance: stmt.importance,
@@ -178,12 +174,12 @@ interface ProfileStatement {
 }
 
 const VALID_TAGS: readonly MemoryTag[] = [
-  "preference",
-  "person",
-  "event",
-  "project",
-  "correction",
-  "summary",
+  'preference',
+  'person',
+  'event',
+  'project',
+  'correction',
+  'summary',
 ];
 
 /**
@@ -192,12 +188,12 @@ const VALID_TAGS: readonly MemoryTag[] = [
  */
 function parseProfileStatements(text: string): ProfileStatement[] {
   const cleaned = text
-    .replace(/```(?:json)?\s*/gi, "")
-    .replace(/```\s*$/g, "")
+    .replace(/```(?:json)?\s*/gi, '')
+    .replace(/```\s*$/g, '')
     .trim();
 
-  const start = cleaned.indexOf("[");
-  const end = cleaned.lastIndexOf("]");
+  const start = cleaned.indexOf('[');
+  const end = cleaned.lastIndexOf(']');
   if (start === -1 || end === -1 || end <= start) return [];
 
   const json = cleaned.slice(start, end + 1);
@@ -207,15 +203,12 @@ function parseProfileStatements(text: string): ProfileStatement[] {
     if (!Array.isArray(parsed)) return [];
 
     return parsed
-      .filter(
-        (item): item is Record<string, unknown> =>
-          typeof item === "object" && item !== null,
-      )
+      .filter((item): item is Record<string, unknown> => typeof item === 'object' && item !== null)
       .map((item) => ({
-        content: typeof item.content === "string" ? item.content : "",
+        content: typeof item.content === 'string' ? item.content : '',
         tags: parseTags(item.tags),
         importance:
-          typeof item.importance === "number" &&
+          typeof item.importance === 'number' &&
           Number.isInteger(item.importance) &&
           item.importance >= 0 &&
           item.importance <= 10
@@ -223,11 +216,7 @@ function parseProfileStatements(text: string): ProfileStatement[] {
             : -1,
       }))
       .filter(
-        (s) =>
-          s.content.length > 0 &&
-          s.tags.length > 0 &&
-          s.importance >= 0 &&
-          s.importance <= 10,
+        (s) => s.content.length > 0 && s.tags.length > 0 && s.importance >= 0 && s.importance <= 10,
       );
   } catch {
     return [];
@@ -237,8 +226,7 @@ function parseProfileStatements(text: string): ProfileStatement[] {
 function parseTags(raw: unknown): MemoryTag[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(
-    (t): t is MemoryTag =>
-      typeof t === "string" && VALID_TAGS.includes(t as MemoryTag),
+    (t): t is MemoryTag => typeof t === 'string' && VALID_TAGS.includes(t as MemoryTag),
   );
 }
 
@@ -253,12 +241,12 @@ function parseTags(raw: unknown): MemoryTag[] {
  * the section entirely.
  */
 export function renderProfileSection(items: MemoryItem[]): string {
-  if (items.length === 0) return "";
+  if (items.length === 0) return '';
 
-  const lines = ["=== User Profile ==="];
+  const lines = ['=== User Profile ==='];
   for (const item of items) {
     lines.push(`- ${item.content}`);
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }

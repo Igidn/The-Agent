@@ -1,5 +1,13 @@
-import { builtinModels } from "@earendil-works/pi-ai/providers/all";
-import type { Api, AssistantMessage, Context, Message, Model, Models, TextContent } from "@earendil-works/pi-ai";
+import { builtinModels } from '@earendil-works/pi-ai/providers/all';
+import type {
+  Api,
+  AssistantMessage,
+  Context,
+  Message,
+  Model,
+  Models,
+  TextContent,
+} from '@earendil-works/pi-ai';
 
 /** Which model eval runs against, as provider/id. */
 export interface EvalModelSpec {
@@ -42,7 +50,7 @@ export async function resolveEvalModel(spec: EvalModelSpec): Promise<Model<Api>>
     .slice(0, 40);
   const hint =
     known.length > 0
-      ? `Known ${spec.provider} models include: ${known.join(", ")}`
+      ? `Known ${spec.provider} models include: ${known.join(', ')}`
       : `Provider "${spec.provider}" is not in the catalog.`;
   throw new Error(`Model ${spec.provider}/${spec.id} not found. ${hint}`);
 }
@@ -65,15 +73,15 @@ export async function completeEvalTurn(
   try {
     reply = await models.complete(model, context);
   } catch (err) {
-    return { text: "", errorMessage: `request failed: ${(err as Error).message}` };
+    return { text: '', errorMessage: `request failed: ${(err as Error).message}` };
   }
 
   const text = reply.content
-    .filter((part): part is TextContent => part.type === "text")
+    .filter((part): part is TextContent => part.type === 'text')
     .map((part) => part.text)
-    .join("");
+    .join('');
 
-  if (reply.stopReason === "error" || reply.stopReason === "aborted") {
+  if (reply.stopReason === 'error' || reply.stopReason === 'aborted') {
     return { text, errorMessage: reply.errorMessage ?? `stop reason: ${reply.stopReason}` };
   }
 

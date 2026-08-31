@@ -1,7 +1,7 @@
-import { appendFile, mkdir } from "node:fs/promises";
-import { dirname } from "node:path";
+import { appendFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 
-import type { CompactionEvent, CompactionSink } from "./types.js";
+import type { CompactionEvent, CompactionSink } from './types.js';
 
 /**
  * Journaling sink for compaction epochs.
@@ -18,7 +18,7 @@ export class JsonlCompactionSink implements CompactionSink {
   /**
    * @param path  Output file. Parent directories are created on first write.
    */
-  constructor(private _path: string = "data/compaction-audit.jsonl") {}
+  constructor(private _path: string = 'data/compaction-audit.jsonl') {}
 
   get path(): string {
     return this._path;
@@ -31,7 +31,7 @@ export class JsonlCompactionSink implements CompactionSink {
   async recordCompaction(event: CompactionEvent): Promise<void> {
     try {
       await mkdir(dirname(this._path), { recursive: true });
-      await appendFile(this._path, JSON.stringify(event) + "\n", "utf-8");
+      await appendFile(this._path, JSON.stringify(event) + '\n', 'utf-8');
     } catch (err) {
       console.warn(`Compaction: audit write failed (${this._path})`, err);
     }

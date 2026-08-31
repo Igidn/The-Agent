@@ -1,14 +1,14 @@
-import { type Static, Type } from "typebox";
-import type { ToolDefinition } from "@earendil-works/pi-coding-agent";
-import type { TextContent } from "@earendil-works/pi-ai";
-import type { MemoryConfig } from "../shared/types.js";
-import type { MemoryStore, ScoredItem } from "./types.js";
+import { type Static, Type } from 'typebox';
+import type { ToolDefinition } from '@earendil-works/pi-coding-agent';
+import type { TextContent } from '@earendil-works/pi-ai';
+import type { MemoryConfig } from '../shared/types.js';
+import type { MemoryStore, ScoredItem } from './types.js';
 
 const memorySearchParams = Type.Object({
-  query: Type.String({ description: "Search query for memory recall" }),
+  query: Type.String({ description: 'Search query for memory recall' }),
   k: Type.Optional(
     Type.Number({
-      description: "Number of results to return (default 10)",
+      description: 'Number of results to return (default 10)',
     }),
   ),
 });
@@ -28,12 +28,12 @@ export function createMemorySearchTool(
   _cfg: MemoryConfig,
 ): ToolDefinition<typeof memorySearchParams> {
   return {
-    name: "memory_search",
-    label: "Memory Search",
+    name: 'memory_search',
+    label: 'Memory Search',
     description:
-      "Search past conversation history and stored facts. " +
-      "Use when you need to recall something specific the user said or decided earlier. " +
-      "Returns relevant memories ranked by similarity.",
+      'Search past conversation history and stored facts. ' +
+      'Use when you need to recall something specific the user said or decided earlier. ' +
+      'Returns relevant memories ranked by similarity.',
 
     parameters: memorySearchParams,
 
@@ -50,11 +50,11 @@ export function createMemorySearchTool(
         const content: TextContent[] = [];
 
         if (results.length === 0) {
-          content.push({ type: "text", text: "No matching memories found." });
+          content.push({ type: 'text', text: 'No matching memories found.' });
         } else {
           const lines = formatResults(results);
           for (const line of lines) {
-            content.push({ type: "text", text: line });
+            content.push({ type: 'text', text: line });
           }
         }
 
@@ -63,7 +63,7 @@ export function createMemorySearchTool(
         return {
           content: [
             {
-              type: "text" as const,
+              type: 'text' as const,
               text: `Memory search failed: ${err instanceof Error ? err.message : String(err)}`,
             },
           ],
@@ -84,7 +84,7 @@ function formatResults(results: ScoredItem[]): string[] {
   const lines: string[] = [];
   for (const result of results) {
     const item = result.item;
-    const tagStr = item.tags.length > 0 ? item.tags.join(", ") : "none";
+    const tagStr = item.tags.length > 0 ? item.tags.join(', ') : 'none';
     lines.push(
       `- [${item.tier}] (${(result.cosine * 100).toFixed(0)}% · importance ${item.importance} · tags: ${tagStr}`,
     );

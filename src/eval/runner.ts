@@ -1,11 +1,11 @@
-import type { Api, AssistantMessage, Message, Model, Usage } from "@earendil-works/pi-ai";
-import { wrapMessage } from "../core/wrapper.js";
-import { runChecks } from "./checks.js";
-import { completeEvalTurn, type LlmTurnResult } from "./llm.js";
-import type { CaseResult, EvalCase, EvalRunResult } from "./types.js";
+import type { Api, AssistantMessage, Message, Model, Usage } from '@earendil-works/pi-ai';
+import { wrapMessage } from '../core/wrapper.js';
+import { runChecks } from './checks.js';
+import { completeEvalTurn, type LlmTurnResult } from './llm.js';
+import type { CaseResult, EvalCase, EvalRunResult } from './types.js';
 
-export { runCompactionEval } from "./compaction.js";
-export type { CompactionCaseResult, CompactionEvalRunResult } from "./compaction.js";
+export { runCompactionEval } from './compaction.js';
+export type { CompactionCaseResult, CompactionEvalRunResult } from './compaction.js';
 
 /** Per-case wall clock limit. A hung provider call must not stall the run. */
 const CASE_TIMEOUT_MS = 180_000;
@@ -43,27 +43,27 @@ function buildCaseMessages(evalCase: EvalCase, model: Model<Api>): Message[] {
   const messages: Message[] = [];
 
   for (const turn of evalCase.history ?? []) {
-    if (turn.role === "user") {
+    if (turn.role === 'user') {
       const wrapped = wrapMessage(turn.text, turn.surface);
-      messages.push({ role: "user", content: wrapped.content, timestamp: Date.now() });
+      messages.push({ role: 'user', content: wrapped.content, timestamp: Date.now() });
       continue;
     }
 
     const replayed: AssistantMessage = {
-      role: "assistant",
-      content: [{ type: "text", text: turn.text }],
+      role: 'assistant',
+      content: [{ type: 'text', text: turn.text }],
       api: model.api,
       provider: model.provider,
       model: model.id,
       usage: ZERO_USAGE,
-      stopReason: "stop",
+      stopReason: 'stop',
       timestamp: Date.now(),
     };
     messages.push(replayed);
   }
 
   const final = wrapMessage(evalCase.message, evalCase.surface, evalCase.memoryContext);
-  messages.push({ role: "user", content: final.content, timestamp: Date.now() });
+  messages.push({ role: 'user', content: final.content, timestamp: Date.now() });
 
   return messages;
 }
@@ -81,11 +81,14 @@ async function runCase(
     turn = await Promise.race([
       completeEvalTurn(model, systemPrompt, messages),
       new Promise<LlmTurnResult>((_, reject) => {
-        setTimeout(() => reject(new Error(`timed out after ${CASE_TIMEOUT_MS}ms`)), CASE_TIMEOUT_MS);
+        setTimeout(
+          () => reject(new Error(`timed out after ${CASE_TIMEOUT_MS}ms`)),
+          CASE_TIMEOUT_MS,
+        );
       }),
     ]);
   } catch (err) {
-    return { evalCase, reply: "", checks: [], passed: false, error: (err as Error).message };
+    return { evalCase, reply: '', checks: [], passed: false, error: (err as Error).message };
   }
 
   if (turn.errorMessage !== undefined) {
@@ -115,17 +118,15 @@ export async function runEval(options: RunnerOptions): Promise<EvalRunResult> {
       const result = await runCase(options.model, options.systemPrompt, next.evalCase);
       collected.push({ index: next.index, result });
 
-      const verdict = result.passed ? "PASS" : "FAIL";
-      const note = result.error !== undefined ? ` (${result.error})` : "";
+      const verdict = result.passed ? 'PASS' : 'FAIL';
+      const note = result.error !== undefined ? ` (${result.error})` : '';
       console.log(`${verdict}  ${result.evalCase.id} [${result.evalCase.category}]${note}`);
     }
   };
 
   await Promise.all(Array.from({ length: workerCount }, () => worker()));
 
-  const results = collected
-    .sort((a, b) => a.index - b.index)
-    .map((entry) => entry.result);
+  const results = collected.sort((a, b) => a.index - b.index).map((entry) => entry.result);
 
   return {
     startedAt: options.startedAt,

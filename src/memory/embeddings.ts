@@ -1,6 +1,6 @@
-import { pipeline } from "@huggingface/transformers";
-import type { MemoryConfig } from "../shared/types.js";
-import type { EmbeddingProvider } from "./types.js";
+import { pipeline } from '@huggingface/transformers';
+import type { MemoryConfig } from '../shared/types.js';
+import type { EmbeddingProvider } from './types.js';
 
 /**
  * Local embedding via transformers.js + ONNX, running in-process.
@@ -8,7 +8,7 @@ import type { EmbeddingProvider } from "./types.js";
 export class LocalEmbeddingProvider implements EmbeddingProvider {
   readonly dims: number;
   #extract:
-    | ((texts: string[], options: { pooling: "mean"; normalize: true }) => Promise<number[][]>)
+    | ((texts: string[], options: { pooling: 'mean'; normalize: true }) => Promise<number[][]>)
     | undefined;
 
   constructor(
@@ -20,7 +20,7 @@ export class LocalEmbeddingProvider implements EmbeddingProvider {
 
   /** Load the model and create the pipeline. Called once at daemon startup. */
   async warmup(): Promise<void> {
-    const pipe = await pipeline("feature-extraction", this.modelId);
+    const pipe = await pipeline('feature-extraction', this.modelId);
     this.#extract = async (texts, options) => {
       const tensor = await pipe(texts, options);
       return tensor.tolist() as number[][];
@@ -32,7 +32,7 @@ export class LocalEmbeddingProvider implements EmbeddingProvider {
       await this.warmup();
     }
     return this.#extract!(texts, {
-      pooling: "mean",
+      pooling: 'mean',
       normalize: true,
     });
   }
@@ -53,8 +53,8 @@ export class SidecarEmbeddingProvider implements EmbeddingProvider {
 
   async embed(texts: string[]): Promise<number[][]> {
     const response = await fetch(`${this.sidecarUrl}/embed`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ texts }),
     });
 
@@ -73,16 +73,11 @@ export class SidecarEmbeddingProvider implements EmbeddingProvider {
  * Factory: create the embedding provider from config.
  */
 export function createEmbeddingProvider(cfg: MemoryConfig): EmbeddingProvider {
-  if (cfg.embedding.provider === "sidecar") {
+  if (cfg.embedding.provider === 'sidecar') {
     if (!cfg.embedding.sidecarUrl) {
-      throw new Error(
-        "sidecarUrl is required when embedding provider is 'sidecar'",
-      );
+      throw new Error("sidecarUrl is required when embedding provider is 'sidecar'");
     }
-    return new SidecarEmbeddingProvider(
-      cfg.embedding.sidecarUrl,
-      cfg.embeddingDims,
-    );
+    return new SidecarEmbeddingProvider(cfg.embedding.sidecarUrl, cfg.embeddingDims);
   }
 
   return new LocalEmbeddingProvider(cfg.embeddingModel, cfg.embeddingDims);

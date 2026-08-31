@@ -1,4 +1,4 @@
-export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
+export type ThinkingLevel = 'off' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max';
 
 /**
  * Auto-compaction policy in the design's absolute token counts.
@@ -60,7 +60,7 @@ export interface MemoryConfig {
   /** Embedding provider settings. */
   embedding: {
     /** Which provider to use. Default "local". */
-    provider: "local" | "sidecar";
+    provider: 'local' | 'sidecar';
     /** Sidecar URL, only used when provider is "sidecar". */
     sidecarUrl?: string;
   };

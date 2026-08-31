@@ -1,4 +1,4 @@
-import type { DaemonConfig } from "../shared/types.js";
+import type { DaemonConfig } from '../shared/types.js';
 import {
   createAgentSession,
   createEventBus,
@@ -6,19 +6,19 @@ import {
   ModelRuntime,
   SessionManager as SdkSessionManager,
   SettingsManager,
-} from "@earendil-works/pi-coding-agent";
+} from '@earendil-works/pi-coding-agent';
 import type {
   AgentSession,
   AgentSessionEvent,
   PromptOptions,
-} from "@earendil-works/pi-coding-agent";
-import { Charter } from "./charter.js";
+} from '@earendil-works/pi-coding-agent';
+import { Charter } from './charter.js';
 import {
   applyCompactionSettings,
   DEFAULT_AGENT_DIR,
   type CompactionPlan,
-} from "./window/compaction-settings.js";
-import type { WindowManager } from "./window/window-manager.js";
+} from './window/compaction-settings.js';
+import type { WindowManager } from './window/window-manager.js';
 
 /** Typed event bus wrapper for session events. */
 export type EventBus<T> = {
@@ -72,7 +72,7 @@ export class SessionManager {
    */
   async start(config: DaemonConfig): Promise<void> {
     if (this._disposed) {
-      throw new Error("SessionManager has been disposed");
+      throw new Error('SessionManager has been disposed');
     }
 
     this.modelRuntime = await ModelRuntime.create({
@@ -104,9 +104,7 @@ export class SessionManager {
       systemPrompt: this.charter.systemPrompt || undefined,
       // Registered here so the compaction hooks are bound for both the
       // automatic and the manual compaction paths from session creation.
-      ...(this.windowManager
-        ? { extensionFactories: [this.windowManager.extension()] }
-        : {}),
+      ...(this.windowManager ? { extensionFactories: [this.windowManager.extension()] } : {}),
     });
 
     const result = await createAgentSession({
@@ -116,7 +114,7 @@ export class SessionManager {
       settingsManager,
       resourceLoader,
       cwd,
-      tools: ["read", "bash", "edit", "write"],
+      tools: ['read', 'bash', 'edit', 'write'],
     });
 
     this.session = result.session;
@@ -124,7 +122,7 @@ export class SessionManager {
     this.windowManager?.bindSession(this.session);
 
     this.session.subscribe((event: AgentSessionEvent) => {
-      this.onEvent.emit("session_event", event);
+      this.onEvent.emit('session_event', event);
     });
   }
 
@@ -155,7 +153,6 @@ export class SessionManager {
     }
   }
 
-
   prompt(text: string, options?: PromptOptions): Promise<void> {
     return this.session.prompt(text, options);
   }
@@ -168,19 +165,15 @@ export class SessionManager {
     return this.session.followUp(text);
   }
 
-
   /**
    * Resolve the model from config or fall back to the first available
    * model that has valid authentication configured.
    */
   private async _resolveModel(
     config: DaemonConfig,
-  ): Promise<Exclude<ReturnType<ModelRuntime["getModel"]>, undefined>> {
+  ): Promise<Exclude<ReturnType<ModelRuntime['getModel']>, undefined>> {
     if (config.model) {
-      const configured = this.modelRuntime.getModel(
-        config.model.provider,
-        config.model.id,
-      );
+      const configured = this.modelRuntime.getModel(config.model.provider, config.model.id);
       if (configured) {
         return configured;
       }
@@ -193,8 +186,8 @@ export class SessionManager {
     const available = await this.modelRuntime.getAvailable();
     if (available.length === 0) {
       throw new Error(
-        "No available models. Configure a provider API key " +
-          "(e.g. ANTHROPIC_API_KEY) and restart.",
+        'No available models. Configure a provider API key ' +
+          '(e.g. ANTHROPIC_API_KEY) and restart.',
       );
     }
 

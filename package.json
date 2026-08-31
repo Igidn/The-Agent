@@ -9,6 +9,10 @@
     "start": "node dist/main.js",
     "dev": "tsc --watch & node --watch dist/main.js",
     "eval": "node --env-file-if-exists=.env dist/eval/main.js",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --check src/",
+    "format:fix": "prettier --write src/",
     "test": "tsc && node --test 'dist/**/*.test.js'"
   },
   "repository": {
@@ -23,10 +27,16 @@
   },
   "homepage": "https://github.com/Igidn/The-Agent#readme",
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.4.0",
     "@types/ws": "^8.18.1",
-    "typescript": "^7.0.2"
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.6",
+    "prettier": "^3.9.6",
+    "typescript": "~5.7",
+    "typescript-eslint": "^8.69.0"
   },
   "dependencies": {
     "@earendil-works/pi-agent-core": "^0.84.4",

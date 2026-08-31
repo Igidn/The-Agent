@@ -1,11 +1,11 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
-import { SettingsManager } from "@earendil-works/pi-coding-agent";
-import type { CompactionSettings } from "@earendil-works/pi-coding-agent";
+import { SettingsManager } from '@earendil-works/pi-coding-agent';
+import type { CompactionSettings } from '@earendil-works/pi-coding-agent';
 
-import type { CompactionConfig } from "../../shared/types.js";
+import type { CompactionConfig } from '../../shared/types.js';
 
 /**
  * The pi config directory the daemon shares with its SDK sessions.
@@ -14,7 +14,7 @@ import type { CompactionConfig } from "../../shared/types.js";
  * the daemon must write against the same directory or its policy would live
  * in a file the session never reads.
  */
-export const DEFAULT_AGENT_DIR = join(homedir(), ".pi", "agent");
+export const DEFAULT_AGENT_DIR = join(homedir(), '.pi', 'agent');
 
 /**
  * The daemon's compaction policy in both vocabularies.
@@ -84,22 +84,25 @@ export async function applyCompactionSettings(
   };
 
   try {
-    const settingsPath = join(agentDir, "settings.json");
+    const settingsPath = join(agentDir, 'settings.json');
 
     let current: string | undefined;
     try {
-      current = await readFile(settingsPath, "utf-8");
+      current = await readFile(settingsPath, 'utf-8');
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
     }
 
-    const file: Record<string, unknown> = current === undefined ? {} : (() => {
-      try {
-        return JSON.parse(current.replace(/^\uFEFF/, "")) as Record<string, unknown>;
-      } catch {
-        throw new Error("settings.json is not valid JSON; leaving it untouched");
-      }
-    })();
+    const file: Record<string, unknown> =
+      current === undefined
+        ? {}
+        : (() => {
+            try {
+              return JSON.parse(current.replace(/^\uFEFF/, '')) as Record<string, unknown>;
+            } catch {
+              throw new Error('settings.json is not valid JSON; leaving it untouched');
+            }
+          })();
 
     file.compaction = block;
 
@@ -110,10 +113,7 @@ export async function applyCompactionSettings(
     settingsManager.setCompactionEnabled(true);
     await settingsManager.flush();
   } catch (err) {
-    console.warn(
-      "Compaction: settings write failed; falling back to SDK defaults",
-      err,
-    );
+    console.warn('Compaction: settings write failed; falling back to SDK defaults', err);
   }
 
   for (const { scope, error } of settingsManager.drainErrors()) {
@@ -122,4 +122,3 @@ export async function applyCompactionSettings(
 
   return plan;
 }
-

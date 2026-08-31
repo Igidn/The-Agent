@@ -1,11 +1,11 @@
-import { createInterface } from "node:readline";
-import WebSocket from "ws";
+import { createInterface } from 'node:readline';
+import WebSocket from 'ws';
 
 interface PostMessageResponse {
   id: string;
   surface: string;
   text: string;
-  status: "queued";
+  status: 'queued';
 }
 
 /**
@@ -23,8 +23,8 @@ export class CliTestClient {
    * @param gatewayUrl Base URL of the gateway, e.g. `http://localhost:8080`.
    * @param surface    Surface identifier to send with each message (default "cli").
    */
-  constructor(gatewayUrl: string, surface = "cli") {
-    this.gatewayUrl = gatewayUrl.replace(/\/+$/, "");
+  constructor(gatewayUrl: string, surface = 'cli') {
+    this.gatewayUrl = gatewayUrl.replace(/\/+$/, '');
     this.surface = surface;
   }
 
@@ -36,21 +36,19 @@ export class CliTestClient {
    * The loop exits on EOF (Ctrl+D), `/quit`, or `/exit`.
    */
   async run(): Promise<void> {
-    const wsUrl = this.gatewayUrl
-      .replace(/^http:/, "ws:")
-      .replace(/^https:/, "wss:");
+    const wsUrl = this.gatewayUrl.replace(/^http:/, 'ws:').replace(/^https:/, 'wss:');
     const wsEndpoint = `${wsUrl}/api/ws`;
 
     console.log(`Connecting to WS: ${wsEndpoint}`);
 
     const ws = new WebSocket(wsEndpoint);
 
-    ws.on("open", () => {
-      console.log("Connected — type a message and press Enter");
+    ws.on('open', () => {
+      console.log('Connected — type a message and press Enter');
       this._startReadline(ws);
     });
 
-    ws.on("message", (data) => {
+    ws.on('message', (data) => {
       const raw = data.toString();
       try {
         const event = JSON.parse(raw);
@@ -60,12 +58,12 @@ export class CliTestClient {
       }
     });
 
-    ws.on("error", (err) => {
+    ws.on('error', (err) => {
       console.error(`WS error: ${err.message}`);
     });
 
-    ws.on("close", (code, reason) => {
-      const msg = reason?.toString() ?? "unknown";
+    ws.on('close', (code, reason) => {
+      const msg = reason?.toString() ?? 'unknown';
       console.log(`\nWS closed (${code}: ${msg})`);
       process.exit(0);
     });
@@ -79,19 +77,19 @@ export class CliTestClient {
     const rl = createInterface({
       input: process.stdin,
       output: process.stdout,
-      prompt: "> ",
+      prompt: '> ',
     });
 
     rl.prompt();
 
-    rl.on("line", async (line) => {
+    rl.on('line', async (line) => {
       const trimmed = line.trim();
       if (!trimmed) {
         rl.prompt();
         return;
       }
 
-      if (trimmed === "/quit" || trimmed === "/exit") {
+      if (trimmed === '/quit' || trimmed === '/exit') {
         rl.close();
         ws.close();
         return;
@@ -108,7 +106,7 @@ export class CliTestClient {
       rl.prompt();
     });
 
-    rl.on("close", () => {
+    rl.on('close', () => {
       ws.close();
       process.exit(0);
     });
@@ -118,17 +116,14 @@ export class CliTestClient {
   // HTTP helpers
   // ---------------------------------------------------------------------------
 
-  private async _postMessage(
-    text: string,
-    surface: string,
-  ): Promise<PostMessageResponse> {
-    const url = new URL("/api/message", this.gatewayUrl);
+  private async _postMessage(text: string, surface: string): Promise<PostMessageResponse> {
+    const url = new URL('/api/message', this.gatewayUrl);
 
     const body = JSON.stringify({ text, surface });
 
     const res = await fetch(url.href, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body,
     });
 
@@ -148,56 +143,56 @@ export class CliTestClient {
     const type = event.type as string | undefined;
 
     switch (type) {
-      case "connected":
+      case 'connected':
         console.log(`[WS] clientId = ${event.clientId as string}`);
         break;
 
-      case "agent_start":
-        console.log("\n[agent] session started");
+      case 'agent_start':
+        console.log('\n[agent] session started');
         break;
 
-      case "agent_end":
-        console.log("[agent] session ended");
+      case 'agent_end':
+        console.log('[agent] session ended');
         break;
 
-      case "agent_settled":
-        console.log("[agent] settled");
+      case 'agent_settled':
+        console.log('[agent] settled');
         break;
 
-      case "turn_start":
-        console.log("\n[turn] start");
+      case 'turn_start':
+        console.log('\n[turn] start');
         break;
 
-      case "turn_end":
-        console.log("[turn] end");
+      case 'turn_end':
+        console.log('[turn] end');
         break;
 
-      case "message_start":
-        console.log("\n[assistant] ");
+      case 'message_start':
+        console.log('\n[assistant] ');
         break;
 
-      case "message_update":
-        if (typeof event.delta === "string") {
+      case 'message_update':
+        if (typeof event.delta === 'string') {
           process.stdout.write(event.delta);
         }
         break;
 
-      case "message_end":
-        console.log("\n[message complete]");
+      case 'message_end':
+        console.log('\n[message complete]');
         break;
 
-      case "tool_execution_start":
-        console.log(`\n[tool] ${(event.name as string) ?? ""} start`);
+      case 'tool_execution_start':
+        console.log(`\n[tool] ${(event.name as string) ?? ''} start`);
         break;
 
-      case "tool_execution_update":
+      case 'tool_execution_update':
         if (event.output !== undefined) {
           console.log(`[tool] ${String(event.output)}`);
         }
         break;
 
-      case "tool_execution_end":
-        console.log(`[tool] ${(event.name as string) ?? ""} end`);
+      case 'tool_execution_end':
+        console.log(`[tool] ${(event.name as string) ?? ''} end`);
         break;
 
       default:

@@ -1,17 +1,17 @@
-import { fileURLToPath } from "node:url";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-import { loadConfig } from "../config/index.js";
-import { Charter } from "../core/charter.js";
-import { printReport, writeRunArtifacts } from "./report.js";
-import { EVAL_CASES } from "./cases.js";
-import { resolveEvalModel, type EvalModelSpec } from "./llm.js";
-import { runEval } from "./runner.js";
-import { runCompactionEval } from "./compaction.js";
+import { loadConfig } from '../config/index.js';
+import { Charter } from '../core/charter.js';
+import { printReport, writeRunArtifacts } from './report.js';
+import { EVAL_CASES } from './cases.js';
+import { resolveEvalModel, type EvalModelSpec } from './llm.js';
+import { runEval } from './runner.js';
+import { runCompactionEval } from './compaction.js';
 
 /** Default eval model. Changing the default without re-running eval is a regression. */
-const DEFAULT_EVAL_MODEL: EvalModelSpec = { provider: "openrouter", id: "z-ai/glm-5.3-flash" };
+const DEFAULT_EVAL_MODEL: EvalModelSpec = { provider: 'openrouter', id: 'z-ai/glm-5.3-flash' };
 
 const USAGE = `Usage: npm run eval [-- <flag>...]
 
@@ -32,23 +32,23 @@ Flags:
  * (bad flags, missing key, unresolvable model, empty persona).
  */
 export async function evalMain(argv: readonly string[]): Promise<number> {
-  const compactionRequested = argv.includes("--compaction");
-  const args = argv.filter((a) => a !== "--compaction");
+  const compactionRequested = argv.includes('--compaction');
+  const args = argv.filter((a) => a !== '--compaction');
 
   const flags = new Map<string, string>();
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === "--help" || arg === "-h") {
+    if (arg === '--help' || arg === '-h') {
       console.log(USAGE);
       return 0;
     }
-    if (!arg.startsWith("--")) {
+    if (!arg.startsWith('--')) {
       console.error(`Unknown argument "${arg}"`);
       console.log(USAGE);
       return 2;
     }
     const value = args[i + 1];
-    if (value === undefined || value.startsWith("--")) {
+    if (value === undefined || value.startsWith('--')) {
       console.error(`Flag ${arg} needs a value`);
       console.log(USAGE);
       return 2;
@@ -58,17 +58,20 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
   }
 
   {
-    const envPath = resolve(process.cwd(), ".env");
+    const envPath = resolve(process.cwd(), '.env');
     let raw: string;
     try {
-      raw = readFileSync(envPath, "utf-8");
-      for (const line of raw.split("\n")) {
+      raw = readFileSync(envPath, 'utf-8');
+      for (const line of raw.split('\n')) {
         const trimmed = line.trim();
-        if (trimmed.length === 0 || trimmed.startsWith("#")) continue;
-        const eq = trimmed.indexOf("=");
+        if (trimmed.length === 0 || trimmed.startsWith('#')) continue;
+        const eq = trimmed.indexOf('=');
         if (eq < 1) continue;
         const key = trimmed.slice(0, eq).trim();
-        const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, "");
+        const value = trimmed
+          .slice(eq + 1)
+          .trim()
+          .replace(/^["']|["']$/g, '');
         if (process.env[key] === undefined) {
           process.env[key] = value;
         }
@@ -79,14 +82,15 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
   }
 
   const config = loadConfig();
-  const modelSpec: EvalModelSpec = flags.has("--model") ? (() => {
-    const value = flags.get("--model")!;
-    const slash = value.indexOf("/");
-    if (slash < 1 || slash === value.length - 1) {
-      throw new Error(`--model expects <provider/id>, got "${value}"`);
-    }
-    return { provider: value.slice(0, slash), id: value.slice(slash + 1) };
-  })()
+  const modelSpec: EvalModelSpec = flags.has('--model')
+    ? (() => {
+        const value = flags.get('--model')!;
+        const slash = value.indexOf('/');
+        if (slash < 1 || slash === value.length - 1) {
+          throw new Error(`--model expects <provider/id>, got "${value}"`);
+        }
+        return { provider: value.slice(0, slash), id: value.slice(slash + 1) };
+      })()
     : config.model !== undefined
       ? { provider: config.model.provider, id: config.model.id }
       : DEFAULT_EVAL_MODEL;
@@ -98,7 +102,7 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
     return result.passed === result.total ? 0 : 1;
   }
 
-  const personaDir = resolve(flags.get("--persona") ?? config.personaDir);
+  const personaDir = resolve(flags.get('--persona') ?? config.personaDir);
 
   const charter = new Charter(personaDir);
   await charter.load();
@@ -107,18 +111,19 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
     return 2;
   }
 
-  const filter = flags.get("--filter")?.toLowerCase();
-  const selected = filter === undefined
-    ? EVAL_CASES
-    : EVAL_CASES.filter((c) => c.id.includes(filter) || c.category.includes(filter));
+  const filter = flags.get('--filter')?.toLowerCase();
+  const selected =
+    filter === undefined
+      ? EVAL_CASES
+      : EVAL_CASES.filter((c) => c.id.includes(filter) || c.category.includes(filter));
   if (selected.length === 0) {
     console.error(`No cases match --filter "${filter}"`);
     return 2;
   }
 
-  const concurrency = flags.has("--concurrency") ? Number(flags.get("--concurrency")) : 4;
+  const concurrency = flags.has('--concurrency') ? Number(flags.get('--concurrency')) : 4;
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 16) {
-    console.error("--concurrency must be an integer between 1 and 16");
+    console.error('--concurrency must be an integer between 1 and 16');
     return 2;
   }
 
@@ -141,21 +146,23 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
 
   printReport(run);
 
-  const outDir = flags.get("--out") ?? resolve(".eval", "runs");
+  const outDir = flags.get('--out') ?? resolve('.eval', 'runs');
   const runDir = await writeRunArtifacts(run, outDir);
   console.log(`Transcripts written to ${runDir}`);
 
   return run.results.every((r) => r.passed) ? 0 : 1;
 }
 
-const isEntryPoint = process.argv[1] !== undefined
-  && fileURLToPath(import.meta.url) === process.argv[1];
+const isEntryPoint =
+  process.argv[1] !== undefined && fileURLToPath(import.meta.url) === process.argv[1];
 
 if (isEntryPoint) {
-  evalMain(process.argv.slice(2)).then((code) => {
-    process.exitCode = code;
-  }).catch((err) => {
-    console.error("Eval: fatal error", err);
-    process.exitCode = 2;
-  });
+  evalMain(process.argv.slice(2))
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch((err) => {
+      console.error('Eval: fatal error', err);
+      process.exitCode = 2;
+    });
 }

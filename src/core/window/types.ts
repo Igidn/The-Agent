@@ -1,4 +1,4 @@
-import type { AgentMessage } from "@earendil-works/pi-agent-core";
+import type { AgentMessage } from '@earendil-works/pi-agent-core';
 
 /**
  * Read model of the window's token state, assembled on demand from pi SDK

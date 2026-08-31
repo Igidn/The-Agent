@@ -1,12 +1,6 @@
-import type { MemoryConfig } from "../shared/types.js";
-import type {
-  LiveWindow,
-} from "../core/window/types.js";
-import type {
-  MemoryStore,
-  PrefetchResult,
-  ScoredItem,
-} from "./types.js";
+import type { MemoryConfig } from '../shared/types.js';
+import type { LiveWindow } from '../core/window/types.js';
+import type { MemoryStore, PrefetchResult, ScoredItem } from './types.js';
 
 /**
  * Build the query text from the current message and the previous assistant
@@ -43,7 +37,7 @@ function hasEntityOverlap(queryText: string, item: { entities?: string[] }): boo
   return item.entities.some((entity) => {
     const lower = entity.toLowerCase();
     // Check word boundary: entity must appear as a whole word in the query.
-    const escaped = lower.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const escaped = lower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`\\b${escaped}\\b`);
     return regex.test(lowerQuery);
   });
@@ -68,22 +62,21 @@ export async function prefetch(
   message: string,
   prevAssistantTurn: string | null,
   liveWindow: LiveWindow,
-  cfg: MemoryConfig["prefetch"],
+  cfg: MemoryConfig['prefetch'],
 ): Promise<PrefetchResult> {
   const queryText = buildQuery(message, prevAssistantTurn);
   if (queryText.trim().length === 0) {
     return { context: null, hits: [] };
   }
 
-  const allResults = await store.search(queryText, cfg.topK, ["episodic"]);
+  const allResults = await store.search(queryText, cfg.topK, ['episodic']);
 
   if (allResults.length === 0) {
     return { context: null, hits: [] };
   }
 
   const eligible = allResults.filter(
-    (r) =>
-      r.item.sourceEntryId === null || !liveWindow.isLive(r.item.sourceEntryId),
+    (r) => r.item.sourceEntryId === null || !liveWindow.isLive(r.item.sourceEntryId),
   );
 
   if (eligible.length === 0) {
@@ -109,7 +102,7 @@ export async function prefetch(
         const ageDays = ageMs / 86_400_000;
         const recency = Math.max(0, 1 - ageDays / 30);
         return r.cosine * 0.5 + recency * 0.25 + normalizedImportance * 0.25;
-      })()
+      })(),
     }))
     .filter((r) => r.score >= cfg.scoreThreshold);
 
@@ -139,7 +132,7 @@ export async function prefetch(
   }
 
   return {
-    context: lines.join("\n"),
+    context: lines.join('\n'),
     hits: scored,
   };
 }

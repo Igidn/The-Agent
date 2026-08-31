@@ -1,4 +1,4 @@
-export type SurfaceId = "discord" | "launcher" | "dashboard" | "cli";
+export type SurfaceId = 'discord' | 'launcher' | 'dashboard' | 'cli';
 
 export interface WrappedMessage {
   /** The full wrapped text including <message> and optional <memory-context> tags. */
@@ -14,22 +14,17 @@ export interface WrappedMessage {
  * to decide which SurfaceId a message origin belongs to.
  */
 const SURFACE_ORIGIN_MAP: Record<SurfaceId, string[]> = {
-  discord: ["discord.com", "discordapp.com", "discord"],
-  launcher: ["launcher", "vicinae"],
-  dashboard: ["dashboard", "localhost:3000", "127.0.0.1"],
-  cli: ["cli", "terminal", "stdin"],
+  discord: ['discord.com', 'discordapp.com', 'discord'],
+  launcher: ['launcher', 'vicinae'],
+  dashboard: ['dashboard', 'localhost:3000', '127.0.0.1'],
+  cli: ['cli', 'terminal', 'stdin'],
 };
 
 /**
  * SurfaceId values ordered by specificity. Used when multiple origins
  * match unexpectedly — the first match in this array wins.
  */
-const SURFACE_PRECEDENCE: SurfaceId[] = [
-  "discord",
-  "dashboard",
-  "launcher",
-  "cli",
-];
+const SURFACE_PRECEDENCE: SurfaceId[] = ['discord', 'dashboard', 'launcher', 'cli'];
 
 /**
  * Parse a surface identifier from an origin string.
@@ -54,7 +49,7 @@ export function parseSurfaceFromOrigin(origin: string): SurfaceId {
     }
   }
 
-  return "cli";
+  return 'cli';
 }
 
 /**
@@ -83,7 +78,7 @@ export function wrapMessage(
   surface: SurfaceId,
   memoryContext?: string,
 ): WrappedMessage {
-  const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
+  const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
   const trimmed = text.trim();
 
   let content = `<message surface="${surface}" time="${timestamp}">\n`;

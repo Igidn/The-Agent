@@ -1,11 +1,5 @@
-export type MemoryTier = "profile" | "episodic";
-export type MemoryTag =
-  | "preference"
-  | "person"
-  | "event"
-  | "project"
-  | "correction"
-  | "summary";
+export type MemoryTier = 'profile' | 'episodic';
+export type MemoryTag = 'preference' | 'person' | 'event' | 'project' | 'correction' | 'summary';
 
 export interface MemoryItem {
   id: string;
@@ -32,7 +26,7 @@ export interface EmbeddingProvider {
 
 export interface MemoryStore {
   upsert(
-    item: Omit<MemoryItem, "id" | "createdAt" | "updatedAt"> & { id?: string },
+    item: Omit<MemoryItem, 'id' | 'createdAt' | 'updatedAt'> & { id?: string },
   ): Promise<MemoryItem>;
   get(id: string): Promise<MemoryItem | null>;
   list(opts?: {
@@ -53,7 +47,7 @@ export interface ExtractedFact {
 }
 
 export interface ExtractionDecision {
-  action: "ADD" | "UPDATE" | "DELETE" | "NOOP";
+  action: 'ADD' | 'UPDATE' | 'DELETE' | 'NOOP';
   targetId?: string;
   content?: string;
 }

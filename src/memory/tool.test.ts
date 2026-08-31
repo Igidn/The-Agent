@@ -1,14 +1,14 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { test } from "node:test";
-import assert from "node:assert/strict";
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
 
-import { SqliteMemoryStore } from "./store.js";
-import { createMemorySearchTool } from "./tool.js";
-import type { EmbeddingProvider } from "./types.js";
-import type { MemoryConfig } from "../shared/types.js";
-import type { ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { SqliteMemoryStore } from './store.js';
+import { createMemorySearchTool } from './tool.js';
+import type { EmbeddingProvider } from './types.js';
+import type { MemoryConfig } from '../shared/types.js';
+import type { ExtensionContext } from '@earendil-works/pi-coding-agent';
 
 // ---------------------------------------------------------------------------
 // Fake embedding provider — deterministic, constant-dimension, no ML needed.
@@ -39,10 +39,10 @@ const fakeEmbeddings: EmbeddingProvider = {
 // ---------------------------------------------------------------------------
 
 const minimalCfg: MemoryConfig = {
-  dbPath: "",
-  embeddingModel: "Xenova/bge-small-en-v1.5",
+  dbPath: '',
+  embeddingModel: 'Xenova/bge-small-en-v1.5',
   embeddingDims: DIMS,
-  embedding: { provider: "local" },
+  embedding: { provider: 'local' },
   prefetch: { topK: 16, maxTokens: 300, strictCosine: 0.6, scoreThreshold: 0.3 },
 };
 
@@ -54,16 +54,14 @@ const mockCtx = {} as ExtensionContext;
 
 function textContent(resultContent: { type: string; text?: string }[]): string {
   return resultContent
-    .filter((c): c is { type: "text"; text: string } => c.type === "text" && c.text !== undefined)
+    .filter((c): c is { type: 'text'; text: string } => c.type === 'text' && c.text !== undefined)
     .map((c) => c.text)
-    .join(" ");
+    .join(' ');
 }
 
-async function withTempStore(
-  fn: (store: SqliteMemoryStore) => Promise<void>,
-): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), "memory-tool-"));
-  const dbPath = join(dir, "test.db");
+async function withTempStore(fn: (store: SqliteMemoryStore) => Promise<void>): Promise<void> {
+  const dir = await mkdtemp(join(tmpdir(), 'memory-tool-'));
+  const dbPath = join(dir, 'test.db');
   const store = new SqliteMemoryStore(dbPath, fakeEmbeddings);
   try {
     await fn(store);
@@ -76,33 +74,33 @@ async function withTempStore(
 /** Seed the store with some sample items. */
 async function seedStore(store: SqliteMemoryStore): Promise<void> {
   await store.upsert({
-    tier: "episodic",
-    content: "User mentioned they enjoy hiking on weekends",
-    tags: ["preference"],
+    tier: 'episodic',
+    content: 'User mentioned they enjoy hiking on weekends',
+    tags: ['preference'],
     importance: 6,
     sourceEntryId: null,
   });
 
   await store.upsert({
-    tier: "episodic",
-    content: "The project deadline was extended to next Friday",
-    tags: ["event", "project"],
+    tier: 'episodic',
+    content: 'The project deadline was extended to next Friday',
+    tags: ['event', 'project'],
     importance: 8,
     sourceEntryId: null,
   });
 
   await store.upsert({
-    tier: "profile",
-    content: "User is a software engineer specializing in distributed systems",
-    tags: ["person"],
+    tier: 'profile',
+    content: 'User is a software engineer specializing in distributed systems',
+    tags: ['person'],
     importance: 9,
     sourceEntryId: null,
   });
 
   await store.upsert({
-    tier: "episodic",
-    content: "User likes coffee with oat milk",
-    tags: ["preference"],
+    tier: 'episodic',
+    content: 'User likes coffee with oat milk',
+    tags: ['preference'],
     importance: 3,
     sourceEntryId: null,
   });
@@ -112,25 +110,37 @@ async function seedStore(store: SqliteMemoryStore): Promise<void> {
 // Tests
 // ---------------------------------------------------------------------------
 
-test("createMemorySearchTool returns a ToolDefinition with correct metadata", async () => {
+test('createMemorySearchTool returns a ToolDefinition with correct metadata', async () => {
   await withTempStore(async (store) => {
     const tool = createMemorySearchTool(store, minimalCfg);
 
-    assert.equal(tool.name, "memory_search");
-    assert.equal(tool.label, "Memory Search");
-    assert.ok(typeof tool.description === "string" && tool.description.length > 0);
+    assert.equal(tool.name, 'memory_search');
+    assert.equal(tool.label, 'Memory Search');
+    assert.ok(typeof tool.description === 'string' && tool.description.length > 0);
     assert.ok(tool.parameters !== undefined);
   });
 });
 
-test("memory_search returns results for a matching query", async () => {
+test('memory_search returns results for a matching query', async () => {
   await withTempStore(async (store) => {
     await seedStore(store);
     const tool = createMemorySearchTool(store, minimalCfg);
 
+    const result = await tool.execute('call-1', { query: 'hiking' }, undefined, undefined, mockCtx);
+
+    assert.ok(result.content.length > 0);
+    const text = textContent(result.content);
+    assert.ok(text.includes('hiking'));
+  });
+});
+
+test('memory_search returns empty response when store is empty', async () => {
+  await withTempStore(async (store) => {
+    const tool = createMemorySearchTool(store, minimalCfg);
+
     const result = await tool.execute(
-      "call-1",
-      { query: "hiking" },
+      'call-2',
+      { query: 'anything' },
       undefined,
       undefined,
       mockCtx,
@@ -138,36 +148,18 @@ test("memory_search returns results for a matching query", async () => {
 
     assert.ok(result.content.length > 0);
     const text = textContent(result.content);
-    assert.ok(text.includes("hiking"));
+    assert.ok(text.includes('No matching'));
   });
 });
 
-test("memory_search returns empty response when store is empty", async () => {
-  await withTempStore(async (store) => {
-    const tool = createMemorySearchTool(store, minimalCfg);
-
-    const result = await tool.execute(
-      "call-2",
-      { query: "anything" },
-      undefined,
-      undefined,
-      mockCtx,
-    );
-
-    assert.ok(result.content.length > 0);
-    const text = textContent(result.content);
-    assert.ok(text.includes("No matching"));
-  });
-});
-
-test("memory_search respects the k parameter", async () => {
+test('memory_search respects the k parameter', async () => {
   await withTempStore(async (store) => {
     await seedStore(store);
     const tool = createMemorySearchTool(store, minimalCfg);
 
     const result = await tool.execute(
-      "call-3",
-      { query: "user", k: 1 },
+      'call-3',
+      { query: 'user', k: 1 },
       undefined,
       undefined,
       mockCtx,
@@ -178,14 +170,14 @@ test("memory_search respects the k parameter", async () => {
   });
 });
 
-test("memory_search returns details: {} in result", async () => {
+test('memory_search returns details: {} in result', async () => {
   await withTempStore(async (store) => {
     await seedStore(store);
     const tool = createMemorySearchTool(store, minimalCfg);
 
     const result = await tool.execute(
-      "call-4",
-      { query: "project" },
+      'call-4',
+      { query: 'project' },
       undefined,
       undefined,
       mockCtx,
@@ -195,15 +187,15 @@ test("memory_search returns details: {} in result", async () => {
   });
 });
 
-test("memory_search handles store errors gracefully", async () => {
+test('memory_search handles store errors gracefully', async () => {
   await withTempStore(async (store) => {
     await store.close();
 
     const tool = createMemorySearchTool(store, minimalCfg);
 
     const result = await tool.execute(
-      "call-5",
-      { query: "anything" },
+      'call-5',
+      { query: 'anything' },
       undefined,
       undefined,
       mockCtx,
@@ -211,6 +203,6 @@ test("memory_search handles store errors gracefully", async () => {
 
     assert.ok(result.content.length > 0);
     const text = textContent(result.content);
-    assert.ok(text.includes("failed") || text.includes("closed"));
+    assert.ok(text.includes('failed') || text.includes('closed'));
   });
 });

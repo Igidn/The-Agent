@@ -1,17 +1,13 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { test } from "node:test";
-import assert from "node:assert/strict";
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
 
-import { SqliteMemoryStore } from "./store.js";
-import { prefetch } from "./prefetch.js";
-import type { LiveWindow } from "../core/window/types.js";
-import type {
-  EmbeddingProvider,
-  MemoryItem,
-  MemoryStore,
-} from "./types.js";
+import { SqliteMemoryStore } from './store.js';
+import { prefetch } from './prefetch.js';
+import type { LiveWindow } from '../core/window/types.js';
+import type { EmbeddingProvider, MemoryItem, MemoryStore } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Fake embedding provider — deterministic, constant-dimension, no ML needed.
@@ -25,7 +21,10 @@ const fakeEmbeddings: EmbeddingProvider = {
     return texts.map((t) => {
       // Word-aware hashing: split into words, hash each, then average.
       // This makes texts sharing words produce correlated vectors.
-      const words = t.toLowerCase().split(/[^a-z0-9]+/g).filter((w) => w.length > 0);
+      const words = t
+        .toLowerCase()
+        .split(/[^a-z0-9]+/g)
+        .filter((w) => w.length > 0);
       if (words.length === 0) {
         // Empty text → zero-ish vector
         const arr = new Array(DIMS).fill(0);
@@ -81,11 +80,9 @@ const DEFAULT_CFG = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function withTempStore(
-  fn: (store: SqliteMemoryStore) => Promise<void>,
-): Promise<void> {
-  const dir = await mkdtemp(join(tmpdir(), "memory-prefetch-"));
-  const dbPath = join(dir, "test.db");
+async function withTempStore(fn: (store: SqliteMemoryStore) => Promise<void>): Promise<void> {
+  const dir = await mkdtemp(join(tmpdir(), 'memory-prefetch-'));
+  const dbPath = join(dir, 'test.db');
   const store = new SqliteMemoryStore(dbPath, fakeEmbeddings);
   try {
     await fn(store);
@@ -101,9 +98,9 @@ async function insertItem(
   overrides: Partial<MemoryItem> & { content: string },
 ): Promise<MemoryItem> {
   return store.upsert({
-    tier: overrides.tier ?? "episodic",
+    tier: overrides.tier ?? 'episodic',
     content: overrides.content,
-    tags: overrides.tags ?? ["event"],
+    tags: overrides.tags ?? ['event'],
     entities: overrides.entities,
     importance: overrides.importance ?? 5,
     sourceEntryId: overrides.sourceEntryId ?? null,
@@ -114,11 +111,11 @@ async function insertItem(
 // Tests
 // ---------------------------------------------------------------------------
 
-test("prefetch: returns null context when store is empty", async () => {
+test('prefetch: returns null context when store is empty', async () => {
   await withTempStore(async (store) => {
     const result = await prefetch(
       store,
-      "hello world",
+      'hello world',
       null,
       makeLiveWindow(new Set()),
       DEFAULT_CFG,
@@ -128,119 +125,119 @@ test("prefetch: returns null context when store is empty", async () => {
   });
 });
 
-test("prefetch: returns relevant items for a matching query", async () => {
+test('prefetch: returns relevant items for a matching query', async () => {
   await withTempStore(async (store) => {
-    await insertItem(store, { content: "user likes hiking in the mountains" });
-    await insertItem(store, { content: "user prefers dark mode for coding" });
-    await insertItem(store, { content: "user has a dog named Max" });
+    await insertItem(store, { content: 'user likes hiking in the mountains' });
+    await insertItem(store, { content: 'user prefers dark mode for coding' });
+    await insertItem(store, { content: 'user has a dog named Max' });
 
     const result = await prefetch(
       store,
-      "what do they like to do outdoors",
+      'what do they like to do outdoors',
       null,
       makeLiveWindow(new Set()),
       DEFAULT_CFG,
     );
 
-    assert.ok(result.context !== null, "should have a context");
-    assert.ok(result.hits.length > 0, "should have hits");
+    assert.ok(result.context !== null, 'should have a context');
+    assert.ok(result.hits.length > 0, 'should have hits');
     // The hiking item should be the most relevant
-    assert.ok(result.context.includes("hiking"), "should mention hiking");
+    assert.ok(result.context.includes('hiking'), 'should mention hiking');
   });
 });
 
-test("prefetch: excludes live items whose sourceEntryId is in the window", async () => {
+test('prefetch: excludes live items whose sourceEntryId is in the window', async () => {
   await withTempStore(async (store) => {
     const liveItem = await insertItem(store, {
-      content: "user just said they love pizza",
-      sourceEntryId: "entry-live-1",
+      content: 'user just said they love pizza',
+      sourceEntryId: 'entry-live-1',
     });
     const oldItem = await insertItem(store, {
-      content: "user mentioned they prefer coffee over tea",
-      sourceEntryId: "entry-old-1",
+      content: 'user mentioned they prefer coffee over tea',
+      sourceEntryId: 'entry-old-1',
     });
 
     const result = await prefetch(
       store,
-      "pizza and coffee preferences",
+      'pizza and coffee preferences',
       null,
-      makeLiveWindow(new Set(["entry-live-1"])),
+      makeLiveWindow(new Set(['entry-live-1'])),
       DEFAULT_CFG,
     );
 
-    assert.ok(result.context !== null, "should have a context");
+    assert.ok(result.context !== null, 'should have a context');
     // The live pizza item should be excluded, but coffee might still show
     // depending on cosine scores. At minimum, nothing with sourceEntryId
     // that's live should appear.
     for (const hit of result.hits) {
-      if (hit.item.sourceEntryId === "entry-live-1") {
-        assert.fail("live item should not appear in results");
+      if (hit.item.sourceEntryId === 'entry-live-1') {
+        assert.fail('live item should not appear in results');
       }
     }
   });
 });
 
-test("prefetch: items with null sourceEntryId are always eligible", async () => {
+test('prefetch: items with null sourceEntryId are always eligible', async () => {
   await withTempStore(async (store) => {
     // Summary chunks and consolidated facts typically have null sourceEntryId.
     await insertItem(store, {
-      content: "user is a software engineer",
-      tier: "episodic",
-      tags: ["summary"],
+      content: 'user is a software engineer',
+      tier: 'episodic',
+      tags: ['summary'],
       sourceEntryId: null,
     });
 
     const result = await prefetch(
       store,
-      "what do they do for work",
+      'what do they do for work',
       null,
-      makeLiveWindow(new Set(["anything-else"])),
+      makeLiveWindow(new Set(['anything-else'])),
       DEFAULT_CFG,
     );
 
-    assert.ok(result.context !== null, "should find null-source items");
+    assert.ok(result.context !== null, 'should find null-source items');
   });
 });
 
-test("prefetch: combines message with previous assistant turn for query", async () => {
+test('prefetch: combines message with previous assistant turn for query', async () => {
   await withTempStore(async (store) => {
     await insertItem(store, {
-      content: "the project uses TypeScript with Node.js",
-      tags: ["project"],
+      content: 'the project uses TypeScript with Node.js',
+      tags: ['project'],
     });
 
     // "what about that?" needs the prev turn to resolve
     const result = await prefetch(
       store,
-      "what about that?",
-      "We discussed the tech stack earlier.",
+      'what about that?',
+      'We discussed the tech stack earlier.',
       makeLiveWindow(new Set()),
       DEFAULT_CFG,
     );
 
-    assert.ok(result.context !== null, "should resolve anaphora");
+    assert.ok(result.context !== null, 'should resolve anaphora');
     if (result.context) {
       assert.ok(
-        result.context.includes("TypeScript") || result.context.includes("project"),
-        "should include the project detail",
+        result.context.includes('TypeScript') || result.context.includes('project'),
+        'should include the project detail',
       );
     }
   });
 });
 
-test("prefetch: filters by strictCosine cutoff and entity overlap", async () => {
+test('prefetch: filters by strictCosine cutoff and entity overlap', async () => {
   await withTempStore(async (store) => {
     // Item with very different content but sharing an entity name
     await insertItem(store, {
-      content: "Alice is a graphic designer",
-      entities: ["Alice"],
-      tags: ["person"],
+      content: 'Alice is a graphic designer',
+      entities: ['Alice'],
+      tags: ['person'],
     });
 
     // Query mentions Alice but is about a different topic
     const result = await prefetch(
       store,
-      "What does Alice think about the new design tool",
+      'What does Alice think about the new design tool',
       null,
       makeLiveWindow(new Set()),
       { ...DEFAULT_CFG, strictCosine: 0.99 }, // Very high threshold
@@ -248,22 +245,22 @@ test("prefetch: filters by strictCosine cutoff and entity overlap", async () => 
 
     // Even with high strictCosine, the entity "Alice" overlap should
     // let it through.
-    assert.ok(result.context !== null, "entity overlap should pass the filter");
+    assert.ok(result.context !== null, 'entity overlap should pass the filter');
   });
 });
 
-test("prefetch: kills vibe-matching when no entity overlap and low cosine", async () => {
+test('prefetch: kills vibe-matching when no entity overlap and low cosine', async () => {
   await withTempStore(async (store) => {
     await insertItem(store, {
-      content: "games night with my friends was fun",
-      tags: ["event"],
-      entities: ["friends"],
+      content: 'games night with my friends was fun',
+      tags: ['event'],
+      entities: ['friends'],
     });
 
     // "gaming" is semantically similar but different topic
     const result = await prefetch(
       store,
-      "gaming",
+      'gaming',
       null,
       makeLiveWindow(new Set()),
       { ...DEFAULT_CFG, strictCosine: 0.99 }, // Very high threshold
@@ -271,18 +268,18 @@ test("prefetch: kills vibe-matching when no entity overlap and low cosine", asyn
 
     // "friends" from the item does not appear in "gaming" → no entity
     // overlap, so the item should be filtered out.
-    assert.equal(result.context, null, "vibe-match should be killed");
+    assert.equal(result.context, null, 'vibe-match should be killed');
   });
 });
 
-test("prefetch: returns null when nothing passes scoreThreshold", async () => {
+test('prefetch: returns null when nothing passes scoreThreshold', async () => {
   await withTempStore(async (store) => {
     // Insert something with low importance and old timestamp
     const oldDate = new Date(Date.now() - 90 * 86_400_000).toISOString();
     await store.upsert({
-      tier: "episodic",
-      content: "completely irrelevant fact",
-      tags: ["event"],
+      tier: 'episodic',
+      content: 'completely irrelevant fact',
+      tags: ['event'],
       importance: 1,
       sourceEntryId: null,
       // We can't set updatedAt directly through upsert, but we can
@@ -292,30 +289,30 @@ test("prefetch: returns null when nothing passes scoreThreshold", async () => {
 
     const result = await prefetch(
       store,
-      "something completely unrelated and different topic",
+      'something completely unrelated and different topic',
       null,
       makeLiveWindow(new Set()),
       { ...DEFAULT_CFG, scoreThreshold: 99 }, // Impossible threshold
     );
 
-    assert.equal(result.context, null, "no results above impossible threshold");
+    assert.equal(result.context, null, 'no results above impossible threshold');
     assert.deepEqual(result.hits, []);
   });
 });
 
-test("prefetch: context respects maxTokens cap", async () => {
+test('prefetch: context respects maxTokens cap', async () => {
   await withTempStore(async (store) => {
     // Insert many items so we can test the cap
     for (let i = 0; i < 20; i++) {
       await insertItem(store, {
         content: `user fact number ${i} that is long enough to consume tokens when rendered repeatedly`,
-        tags: ["event"],
+        tags: ['event'],
       });
     }
 
     const result = await prefetch(
       store,
-      "user facts",
+      'user facts',
       null,
       makeLiveWindow(new Set()),
       { ...DEFAULT_CFG, maxTokens: 20 }, // very tight budget
@@ -332,24 +329,24 @@ test("prefetch: context respects maxTokens cap", async () => {
   });
 });
 
-test("prefetch: returns hits in score-descending order", async () => {
+test('prefetch: returns hits in score-descending order', async () => {
   await withTempStore(async (store) => {
     await insertItem(store, {
-      content: "mildly relevant detail about the project structure",
+      content: 'mildly relevant detail about the project structure',
       importance: 3,
     });
     await insertItem(store, {
-      content: "very critical information about the architecture decisions",
+      content: 'very critical information about the architecture decisions',
       importance: 9,
     });
     await insertItem(store, {
-      content: "somewhat useful note about the deployment pipeline",
+      content: 'somewhat useful note about the deployment pipeline',
       importance: 6,
     });
 
     const result = await prefetch(
       store,
-      "architecture project deployment",
+      'architecture project deployment',
       null,
       makeLiveWindow(new Set()),
       DEFAULT_CFG,
@@ -366,31 +363,25 @@ test("prefetch: returns hits in score-descending order", async () => {
   });
 });
 
-test("prefetch: empty message returns null context", async () => {
+test('prefetch: empty message returns null context', async () => {
   await withTempStore(async (store) => {
-    await insertItem(store, { content: "some content" });
+    await insertItem(store, { content: 'some content' });
 
-    const result = await prefetch(
-      store,
-      "",
-      null,
-      makeLiveWindow(new Set()),
-      DEFAULT_CFG,
-    );
+    const result = await prefetch(store, '', null, makeLiveWindow(new Set()), DEFAULT_CFG);
 
     assert.equal(result.context, null);
     assert.deepEqual(result.hits, []);
   });
 });
 
-test("prefetch: prevAssistantTurn alone with empty message returns null", async () => {
+test('prefetch: prevAssistantTurn alone with empty message returns null', async () => {
   await withTempStore(async (store) => {
-    await insertItem(store, { content: "some content" });
+    await insertItem(store, { content: 'some content' });
 
     const result = await prefetch(
       store,
-      "",
-      "previous assistant message",
+      '',
+      'previous assistant message',
       makeLiveWindow(new Set()),
       DEFAULT_CFG,
     );
@@ -402,54 +393,54 @@ test("prefetch: prevAssistantTurn alone with empty message returns null", async 
     // = "previous assistant message" which is non-empty. So it should search.
     // But the content may not match semantically.
     // The assertion here is just that it doesn't crash.
-    assert.ok(result.context === null || typeof result.context === "string");
+    assert.ok(result.context === null || typeof result.context === 'string');
   });
 });
 
-test("prefetch: multiple items rendered as bullet lines", async () => {
+test('prefetch: multiple items rendered as bullet lines', async () => {
   await withTempStore(async (store) => {
     await insertItem(store, {
-      content: "user prefers functional programming",
+      content: 'user prefers functional programming',
       importance: 7,
     });
     await insertItem(store, {
-      content: "user dislikes unnecessary complexity",
+      content: 'user dislikes unnecessary complexity',
       importance: 6,
     });
 
     const result = await prefetch(
       store,
-      "programming preferences",
+      'programming preferences',
       null,
       makeLiveWindow(new Set()),
       DEFAULT_CFG,
     );
 
     if (result.context !== null) {
-      const lines = result.context.split("\n");
+      const lines = result.context.split('\n');
       for (const line of lines) {
-        assert.ok(line.startsWith("- "), `each line should start with "- ": "${line}"`);
+        assert.ok(line.startsWith('- '), `each line should start with "- ": "${line}"`);
       }
     }
   });
 });
 
-test("prefetch: profile items are never returned", async () => {
+test('prefetch: profile items are never returned', async () => {
   await withTempStore(async (store) => {
     await insertItem(store, {
-      content: "user is a system architect",
-      tier: "profile",
+      content: 'user is a system architect',
+      tier: 'profile',
       importance: 8,
     });
     await insertItem(store, {
-      content: "user discussed system design patterns",
-      tier: "episodic",
+      content: 'user discussed system design patterns',
+      tier: 'episodic',
       importance: 6,
     });
 
     const result = await prefetch(
       store,
-      "system architecture and design",
+      'system architecture and design',
       null,
       makeLiveWindow(new Set()),
       DEFAULT_CFG,
@@ -459,9 +450,9 @@ test("prefetch: profile items are never returned", async () => {
     // from the episodic tier only.
     const tiers = result.hits.map((h) => h.item.tier);
     assert.ok(
-      !tiers.includes("profile"),
+      !tiers.includes('profile'),
       `profile items must not be prefetched, got tiers: ${tiers}`,
     );
-    assert.ok(result.context !== null, "episodic items should be returned");
+    assert.ok(result.context !== null, 'episodic items should be returned');
   });
 });
