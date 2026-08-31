@@ -10,7 +10,7 @@ import type {
 import { generateSummaryWithUsage } from "@earendil-works/pi-coding-agent";
 import type { Api, Model, Models, Usage } from "@earendil-works/pi-ai";
 
-import type { CompactionConfig } from "../../config/index.js";
+import type { CompactionConfig } from "../../shared/types.js";
 import { compactionInstructions, consolidateSummary } from "./compaction.js";
 import type { CompactionEvent, CompactionSink, LiveWindow, WindowStats } from "./types.js";
 

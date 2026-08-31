@@ -1,4 +1,4 @@
-import type { DaemonConfig } from "../config/index.js";
+import type { DaemonConfig } from "../shared/types.js";
 import {
   createAgentSession,
   createEventBus,

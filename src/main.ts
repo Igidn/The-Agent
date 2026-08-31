@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
-import { loadConfig, type DaemonConfig } from "./config/index.js";
+import { loadConfig } from "./config/index.js";
+import type { DaemonConfig } from "./shared/types.js";
 import { Charter } from "./core/charter.js";
 import { SessionManager } from "./core/session.js";
 import { MessageQueue } from "./core/queue.js";

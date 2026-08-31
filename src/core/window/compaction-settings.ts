@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { SettingsManager } from "@earendil-works/pi-coding-agent";
 import type { CompactionSettings } from "@earendil-works/pi-coding-agent";
 
-import type { CompactionConfig } from "../../config/index.js";
+import type { CompactionConfig } from "../../shared/types.js";
 
 /**
  * The pi config directory the daemon shares with its SDK sessions.
