@@ -1,4 +1,5 @@
-export { loadConfig, type DaemonConfig, type ThinkingLevel } from "./config/index.js";
+export { loadConfig, type CompactionConfig, type DaemonConfig, type ThinkingLevel } from "./config/index.js";
+export { applyCompactionSettings, DEFAULT_AGENT_DIR, type CompactionPlan } from "./core/window/compaction-settings.js";
 export { wrapMessage, parseSurfaceFromOrigin, type SurfaceId, type WrappedMessage } from "./core/wrapper.js";
 export { SessionManager, type EventBus } from "./core/session.js";
 export { MessageQueue, type QueueState, type QueueStatus, type SurfaceQueueInfo } from "./core/queue.js";
