@@ -314,8 +314,10 @@ export async function ingestFact(
   fact: ExtractedFact,
   sourceEntryId: string | null,
 ): Promise<void> {
-  // Search with a generous K to catch potential duplicates.
-  const candidates = await store.search(fact.content, 10, ["episodic"]);
+  // Search both tiers for similar content (kNN + tag-key overlap). The
+  // design's dedupe runs against profile and episodic; a novel fact that
+  // merely restates a profile item should NOOP, not double up.
+  const candidates = await store.search(fact.content, 10);
 
   // Find the best textual match among candidates.
   const match = findBestTagKeyMatch(fact, candidates);

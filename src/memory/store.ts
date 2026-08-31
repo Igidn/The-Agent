@@ -1,4 +1,6 @@
 import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import Database, { type Statement } from "better-sqlite3";
 import { load as loadVec } from "sqlite-vec";
 import type {
@@ -31,6 +33,9 @@ export class SqliteMemoryStore implements MemoryStore {
     private embeddings: EmbeddingProvider,
   ) {
     this._dims = embeddings.dims;
+    // The audit sink creates its parent dir on first write; match that so
+    // the default ./data/memory.db works on a fresh checkout.
+    mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new Database(dbPath, { safeIntegers: true } as any);
     loadVec(this.db);
     this.initSchema();
@@ -254,10 +259,18 @@ export class SqliteMemoryStore implements MemoryStore {
     //    The vec0 virtual table's distance column returns cosine distance
     //    (0 = identical, 1 = orthogonal, 2 = opposite).
     //    Convert to cosine similarity: sim = 1 - distance.
-    const tierFilter =
-      tiers && tiers.length > 0
-        ? `AND i.tier IN (${tiers.map((t) => `'${t}'`).join(",")})`
-        : "";
+    const tierFilter: string[] = [];
+    const params: Record<string, unknown> = {
+      query: new Float32Array(queryVec),
+      k,
+    };
+    if (tiers && tiers.length > 0) {
+      tiers.forEach((t, i) => {
+        tierFilter.push(`@tier${i}`);
+        params[`tier${i}`] = t;
+      });
+    }
+    const tierSql = tierFilter.length > 0 ? `AND i.tier IN (${tierFilter.join(",")})` : "";
 
     const sql = `
       SELECT v.rowid, v.distance, i.uuid, i.tier, i.content, i.tags, i.entities,
@@ -265,14 +278,12 @@ export class SqliteMemoryStore implements MemoryStore {
       FROM vec_items v
       JOIN items i ON i.id = v.rowid
       WHERE v.embedding MATCH @query
-        ${tierFilter}
+        ${tierSql}
         AND k = @k
       ORDER BY v.distance
     `;
 
-    const rows = this.db
-      .prepare(sql)
-      .all({ query: new Float32Array(queryVec), k }) as Record<string, unknown>[];
+    const rows = this.db.prepare(sql).all(params) as Record<string, unknown>[];
 
     return rows.map((r) => {
       const cosineDist = Number(r.distance);
