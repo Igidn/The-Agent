@@ -32,14 +32,6 @@ const SURFACE_PRECEDENCE: SurfaceId[] = [
 ];
 
 /**
- * Format a date as a compact ISO 8601 string with Z suffix.
- * 2025-08-30T18:04:00Z instead of the padded variant.
- */
-function formatTimestamp(date: Date): string {
-  return date.toISOString().replace(/\.\d{3}Z$/, "Z");
-}
-
-/**
  * Parse a surface identifier from an origin string.
  *
  * Checks known substrings mapped to each surface. Returns "cli" when
@@ -91,7 +83,7 @@ export function wrapMessage(
   surface: SurfaceId,
   memoryContext?: string,
 ): WrappedMessage {
-  const timestamp = formatTimestamp(new Date());
+  const timestamp = new Date().toISOString().replace(/\.\d{3}Z$/, "Z");
   const trimmed = text.trim();
 
   let content = `<message surface="${surface}" time="${timestamp}">\n`;

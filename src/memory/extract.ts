@@ -43,23 +43,6 @@ const EXTRACT_SYSTEM_PROMPT = [
 ].join("\n");
 
 /**
- * Format an AgentMessage into a short text line for the extraction prompt.
- */
-function formatMessage(msg: AgentMessage): string {
-  const m = msg as unknown as Record<string, unknown>;
-  const role = typeof m.role === "string" ? m.role : "unknown";
-  if ("content" in m && Array.isArray(m.content)) {
-    const texts = (m.content as Array<{ type?: string; text?: string }>)
-      .filter((c): c is { type: string; text: string } => c.type === "text" && typeof c.text === "string")
-      .map((c) => c.text);
-    if (texts.length > 0) return `${role}: ${texts.join(" ")}`;
-  }
-  if ((role === "toolResult" || role === "tool") && typeof m.toolCallId === "string") {
-    return `[tool result for ${m.toolCallId}]`;
-  }
-  return `[${role} message]`;
-}
-
 /**
  * Call the LLM and parse out a JSON array of ExtractedFact objects.
  *
@@ -74,7 +57,20 @@ export async function extractFacts(
 ): Promise<ExtractedFact[]> {
   if (messages.length === 0) return [];
 
-  const conversation = messages.map(formatMessage).join("\n");
+  const conversation = messages.map((msg) => {
+    const m = msg as unknown as Record<string, unknown>;
+    const role = typeof m.role === "string" ? m.role : "unknown";
+    if ("content" in m && Array.isArray(m.content)) {
+      const texts = (m.content as Array<{ type?: string; text?: string }>)
+        .filter((c): c is { type: string; text: string } => c.type === "text" && typeof c.text === "string")
+        .map((c) => c.text);
+      if (texts.length > 0) return `${role}: ${texts.join(" ")}`;
+    }
+    if ((role === "toolResult" || role === "tool") && typeof m.toolCallId === "string") {
+      return `[tool result for ${m.toolCallId}]`;
+    }
+    return `[${role} message]`;
+  }).join("\n");
 
   const userMessage: Message = {
     role: "user" as const,

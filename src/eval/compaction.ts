@@ -262,31 +262,7 @@ const CASE_CONSOLIDATION: CompactionEvalCase = {
   ],
 };
 
-/** Simple substring grep check. */
-function checkMustContain(summary: string, items: string[]): CompactionCheck[] {
-  return items.map((item) => ({
-    name: `must-contain: "${item}"`,
-    pass: summary.toLowerCase().includes(item.toLowerCase()),
-    detail: summary.toLowerCase().includes(item.toLowerCase())
-      ? ""
-      : `"${item}" not found in summary`,
-  }));
-}
 
-/** Simple substring anti-grep check. "a.*b" entries match as regexes. */
-function checkMustNotContain(summary: string, items: string[]): CompactionCheck[] {
-  return items.map((item) => {
-    const isRegex = item.includes(".*");
-    const pass = isRegex
-      ? !new RegExp(item, "i").test(summary)
-      : !summary.toLowerCase().includes(item.toLowerCase());
-    return {
-      name: `must-not-contain: "${item}"`,
-      pass,
-      detail: pass ? "" : `"${item}" found in summary`,
-    };
-  });
-}
 
 /** LLM-as-judge check: asks a cheap model whether the summary satisfies a property. */
 async function judgeCheck(
@@ -428,7 +404,17 @@ async function runSingleCase(
     );
 
     // Grep checks
-    const mustNotContainChecks = checkMustNotContain(summary, c.ground.mustNotContain);
+    const mustNotContainChecks = c.ground.mustNotContain.map((item) => {
+      const isRegex = item.includes(".*");
+      const pass = isRegex
+        ? !new RegExp(item, "i").test(summary)
+        : !summary.toLowerCase().includes(item.toLowerCase());
+      return {
+        name: `must-not-contain: "${item}"`,
+        pass,
+        detail: pass ? "" : `"${item}" found in summary`,
+      };
+    });
 
     // Tool-leak indicator checks
     const toolLeakChecks = c.ground.toolLeakIndicators.map((indicator) => ({

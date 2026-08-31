@@ -84,7 +84,28 @@ export async function applyCompactionSettings(
   };
 
   try {
-    await writeCompactionBlock(agentDir, block);
+    const settingsPath = join(agentDir, "settings.json");
+
+    let current: string | undefined;
+    try {
+      current = await readFile(settingsPath, "utf-8");
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
+
+    const file: Record<string, unknown> = current === undefined ? {} : (() => {
+      try {
+        return JSON.parse(current.replace(/^\uFEFF/, "")) as Record<string, unknown>;
+      } catch {
+        throw new Error("settings.json is not valid JSON; leaving it untouched");
+      }
+    })();
+
+    file.compaction = block;
+
+    await mkdir(agentDir, { recursive: true });
+    await writeFile(settingsPath, JSON.stringify(file, null, 2));
+
     await settingsManager.reload();
     settingsManager.setCompactionEnabled(true);
     await settingsManager.flush();
@@ -102,46 +123,3 @@ export async function applyCompactionSettings(
   return plan;
 }
 
-/**
- * Merge the compaction block into the agentDir settings.json, preserving
- * every other key the file already carries.
- *
- * The file is the SDK's global settings file: a single JSON object, written
- * with the same shape (two-space indent, no trailing newline) the SDK's own
- * persist path produces, plus a BOM-tolerant read so hand-edited files
- * survive. A missing file starts from an empty object; a corrupt file is
- * left alone (rewriting it could destroy the user's other settings).
- */
-async function writeCompactionBlock(
-  agentDir: string,
-  block: CompactionSettings,
-): Promise<void> {
-  const settingsPath = join(agentDir, "settings.json");
-
-  let current: string | undefined;
-  try {
-    current = await readFile(settingsPath, "utf-8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-  }
-
-  const file = current === undefined ? {} : parseSettingsFile(current);
-
-  file.compaction = block;
-
-  await mkdir(agentDir, { recursive: true });
-  await writeFile(settingsPath, JSON.stringify(file, null, 2));
-}
-
-/**
- * Parse the current settings file. A corrupt file throws so the caller
- * degrades to defaults instead of rewriting it and losing the other
- * settings it still holds.
- */
-function parseSettingsFile(raw: string): Record<string, unknown> {
-  try {
-    return JSON.parse(raw.replace(/^\uFEFF/, "")) as Record<string, unknown>;
-  } catch {
-    throw new Error("settings.json is not valid JSON; leaving it untouched");
-  }
-}
