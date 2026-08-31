@@ -1,3 +1,4 @@
+export { WindowManager } from "./core/window/window-manager.js";
 export {
   compactionInstructions,
   consolidateSummary,
