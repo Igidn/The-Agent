@@ -23,6 +23,7 @@
   },
   "homepage": "https://github.com/Igidn/The-Agent#readme",
   "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^26.4.0",
     "@types/ws": "^8.18.1",
     "typescript": "^7.0.2"
@@ -31,6 +32,8 @@
     "@earendil-works/pi-agent-core": "^0.84.4",
     "@earendil-works/pi-ai": "^0.84.4",
     "@earendil-works/pi-coding-agent": "^0.84.4",
+    "better-sqlite3": "^13.0.3",
+    "sqlite-vec": "^0.1.9",
     "ws": "^8.21.3"
   }
 }
