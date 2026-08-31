@@ -25,9 +25,33 @@ export class Charter {
    */
   constructor(private personaDir: string) {}
 
-  /** Composed system prompt (charter first, then few-shots). */
+  /** Composed system prompt (charter first, then few-shots, then profile placeholder). */
   get systemPrompt(): string {
     return this._systemPrompt;
+  }
+
+  /**
+   * Replace the `<!-- profile -->` placeholder in the system prompt with a
+   * profile section block.
+   *
+   * The first call replaces the bare placeholder.  Subsequent calls replace
+   * the entire `<!-- profile -->…<!-- /profile -->` block, so the profile
+   * section can be updated without accumulating stale entries.
+   *
+   * May only be called from a `windowManager.onBoundary` callback.  Profile
+   * changes at compaction boundaries are the single sanctioned system-prompt
+   * mutation point (the cache is already dead from the summary rewrite).
+   */
+  setProfileSection(text: string): void {
+    const block = `<!-- profile -->\n${text}\n<!-- /profile -->`;
+    const blockPattern = /<!-- profile -->[\s\S]*?<!-- \/profile -->/;
+
+    if (blockPattern.test(this._systemPrompt)) {
+      this._systemPrompt = this._systemPrompt.replace(blockPattern, block);
+    } else if (this._systemPrompt.includes("<!-- profile -->")) {
+      this._systemPrompt = this._systemPrompt.replace("<!-- profile -->", block);
+    }
+    // No placeholder — nothing to do.  The prompt was not composed with one.
   }
 
   /**
@@ -140,6 +164,9 @@ export class Charter {
       parts.push("=== Few-shots ===");
       parts.push(fewShots);
     }
+
+    // Append the profile placeholder so setProfileSection has a hook.
+    parts.push("<!-- profile -->");
 
     return parts.join("\n\n");
   }
