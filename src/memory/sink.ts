@@ -178,10 +178,6 @@ export class MemoryCompactionSink implements CompactionSink {
     await this._fireConsolidation();
   }
 
-  // ------------------------------------------------------------------
-  // Step 1 & 2: re-extract and ingest
-  // ------------------------------------------------------------------
-
   private async _processDroppedMessages(event: CompactionEvent): Promise<void> {
     if (event.droppedMessages.length === 0) return;
 
@@ -208,10 +204,6 @@ export class MemoryCompactionSink implements CompactionSink {
       );
     }
   }
-
-  // ------------------------------------------------------------------
-  // Step 3: persist rolling summary
-  // ------------------------------------------------------------------
 
   private async _persistRollingSummary(event: CompactionEvent): Promise<void> {
     // The SDK merges previousSummary into the new epoch summary (its update
@@ -243,10 +235,6 @@ export class MemoryCompactionSink implements CompactionSink {
       }
     }
   }
-
-  // ------------------------------------------------------------------
-  // Step 4: fire consolidation
-  // ------------------------------------------------------------------
 
   private async _fireConsolidation(): Promise<void> {
     try {

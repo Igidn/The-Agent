@@ -80,7 +80,6 @@ export async function consolidateProfile(
   models: Models,
   signal?: AbortSignal,
 ): Promise<MemoryItem[]> {
-  // 1. Fetch existing profile + recent episodic facts.
   const [existingProfile, recentEpisodic] = await Promise.all([
     store.list({ tier: "profile" }),
     store.list({
@@ -90,7 +89,6 @@ export async function consolidateProfile(
     }),
   ]);
 
-  // 2. Format input for the LLM.
   const existingSection =
     existingProfile.length > 0
       ? existingProfile
@@ -133,7 +131,6 @@ export async function consolidateProfile(
     messages: [userMessage],
   };
 
-  // 3. Call the LLM.
   let reply: AssistantMessage;
   try {
     reply = await models.complete(model, context, { signal });
@@ -154,19 +151,15 @@ export async function consolidateProfile(
     .map((part) => part.text)
     .join("");
 
-  // 4. Parse the response.
   const profileStatements = parseProfileStatements(text);
   if (profileStatements.length === 0) {
-    // If the LLM returned nothing usable, keep the existing profile.
     return existingProfile;
   }
 
-  // 5. Delete all old profile items.
   await Promise.all(
     existingProfile.map((item) => store.delete(item.id)),
   );
 
-  // 6. Insert new profile items.
   const newItems: MemoryItem[] = [];
   for (const stmt of profileStatements) {
     const item = await store.upsert({

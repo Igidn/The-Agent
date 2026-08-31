@@ -245,6 +245,11 @@ export class SqliteMemoryStore implements MemoryStore {
     this.stmtDelete.run(id);
   }
 
+  /**
+   * Embed the query text and run a kNN vector search with optional tier
+   * filtering. Results include the cosine distance converted to similarity
+   * (1 - distance) so callers can re-score with their own blend.
+   */
   async search(
     text: string,
     k: number,
@@ -252,13 +257,8 @@ export class SqliteMemoryStore implements MemoryStore {
   ): Promise<ScoredItem[]> {
     if (k < 1) return [];
 
-    // 1. Embed the query
     const [queryVec] = await this.embeddings.embed([text]);
 
-    // 2. Build the search query
-    //    The vec0 virtual table's distance column returns cosine distance
-    //    (0 = identical, 1 = orthogonal, 2 = opposite).
-    //    Convert to cosine similarity: sim = 1 - distance.
     const tierFilter: string[] = [];
     const params: Record<string, unknown> = {
       query: new Float32Array(queryVec),

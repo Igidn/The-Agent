@@ -107,25 +107,17 @@ export async function prefetch(
   liveWindow: LiveWindow,
   cfg: MemoryConfig["prefetch"],
 ): Promise<PrefetchResult> {
-  // Step 1: build query text
   const queryText = buildQuery(message, prevAssistantTurn);
   if (queryText.trim().length === 0) {
     return { context: null, hits: [] };
   }
 
-  // Step 2: vector search over episodic candidates. Profile items are
-  // excluded: they are already in the system prompt (byte-stable), so
-  // surfacing them in <memory-context> would double-count them and eat
-  // the token budget.
   const allResults = await store.search(queryText, cfg.topK, ["episodic"]);
 
   if (allResults.length === 0) {
     return { context: null, hits: [] };
   }
 
-  // Step 3: exclude items still live in the window.
-  // An item with sourceEntryId === null has no linkage and is always
-  // eligible (e.g. profile items written during consolidation).
   const eligible = allResults.filter(
     (r) =>
       r.item.sourceEntryId === null || !liveWindow.isLive(r.item.sourceEntryId),
@@ -135,11 +127,6 @@ export async function prefetch(
     return { context: null, hits: [] };
   }
 
-  // Step 4: filter by tag/entity overlap OR strict cosine cutoff.
-  //
-  // Items above strictCosine are kept outright (semantically on-topic).
-  // Items below it must have entity overlap with the query text, which
-  // prevents vibe-matching ("gaming" != "games night with my friends").
   const filtered = eligible.filter((r) => {
     if (r.cosine >= cfg.strictCosine) return true;
     return hasEntityOverlap(queryText, r.item);
@@ -149,7 +136,6 @@ export async function prefetch(
     return { context: null, hits: [] };
   }
 
-  // Step 5: re-score and apply threshold.
   const scored = filtered
     .map((r) => ({
       item: r.item,
@@ -162,8 +148,6 @@ export async function prefetch(
     return { context: null, hits: [] };
   }
 
-  // Step 6: render as `- fact` lines, sorted by score desc, capped at
-  // maxTokens.
   scored.sort((a, b) => b.score - a.score);
 
   const lines: string[] = [];
