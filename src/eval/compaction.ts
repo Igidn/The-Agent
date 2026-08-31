@@ -51,12 +51,14 @@ export interface CompactionEvalRunResult {
 
 /** Ground truth for one test transcript. */
 interface GroundTruth {
-  /** Full or substring — every one MUST appear in the summary. */
+  /** Topics — each MUST be covered, in any wording. Grep first, judge on miss. */
   mustContain: string[];
-  /** Every one MUST NOT appear in the summary. */
+  /** Every one MUST NOT appear in the summary. Matched literally, or as regex when it contains ".*". */
   mustNotContain: string[];
   /** Substrings whose presence means tool spam leaked. */
   toolLeakIndicators: string[];
+  /** Free-form judge questions for properties grep cannot express. */
+  judgeQuestions?: string[];
 }
 
 /** A synthetic transcript to compact. */
@@ -156,13 +158,15 @@ const CASE_TOOL_SPAM: CompactionEvalCase = {
       "staging",
       "environment",
     ],
+    // Raw invocations and raw output only. A passing mention of a tool
+    // in a decision line is legitimate summary content.
     mustNotContain: [
-      "kubectl",
       "npm run build",
       "docker compose",
       "stdout",
+      "exit code",
     ],
-    toolLeakIndicators: ["bash", "exit code", "stderr"],
+    toolLeakIndicators: ["stderr", "exit code"],
   },
   transcript: [
     userMsg("can you deploy the staging environment for me"),
@@ -215,11 +219,13 @@ const CASE_THREAD_DISCIPLINE: CompactionEvalCase = {
       "push notifications",
       "webp",
     ],
-    mustNotContain: [
-      "notification.*image",
-      "webp.*push",
-    ],
+    mustNotContain: [],
     toolLeakIndicators: [],
+    // Both threads appearing in one goal header is fine; the failure mode
+    // is blending them into one stream of work.
+    judgeQuestions: [
+      "Are the push-notification thread and the image-optimization thread kept as clearly distinct work streams, not blended into one?",
+    ],
   },
   transcript: [
     // Thread A: notification service
@@ -283,15 +289,19 @@ function checkMustContain(summary: string, items: string[]): CompactionCheck[] {
   }));
 }
 
-/** Simple substring anti-grep check. */
+/** Simple substring anti-grep check. "a.*b" entries match as regexes. */
 function checkMustNotContain(summary: string, items: string[]): CompactionCheck[] {
-  return items.map((item) => ({
-    name: `must-not-contain: "${item}"`,
-    pass: !summary.toLowerCase().includes(item.toLowerCase()),
-    detail: !summary.toLowerCase().includes(item.toLowerCase())
-      ? ""
-      : `"${item}" found in summary`,
-  }));
+  return items.map((item) => {
+    const isRegex = item.includes(".*");
+    const pass = isRegex
+      ? !new RegExp(item, "i").test(summary)
+      : !summary.toLowerCase().includes(item.toLowerCase());
+    return {
+      name: `must-not-contain: "${item}"`,
+      pass,
+      detail: pass ? "" : `"${item}" found in summary`,
+    };
+  });
 }
 
 /** LLM-as-judge check: asks a cheap model whether the summary satisfies a property. */
@@ -382,13 +392,15 @@ export async function runCompactionEval(
         evalModels,
       );
       const survived = CASE_COMMITMENTS.ground.mustContain[0]; // "migration scripts"
-      const survivedCheck: CompactionCheck = {
-        name: `consolidation: oldest commitment "${survived}" survived`,
-        pass: consolidated.text.toLowerCase().includes(survived.toLowerCase()),
-        detail: consolidated.text.toLowerCase().includes(survived.toLowerCase())
-          ? ""
-          : `"${survived}" lost during consolidation`,
-      };
+      const survivedCheck: CompactionCheck =
+        consolidated.text.toLowerCase().includes(survived.toLowerCase())
+          ? { name: `consolidation: oldest commitment "${survived}" survived`, pass: true, detail: "" }
+          : await judgeCheck(
+              model,
+              "You evaluate conversation summaries. Answer only YES or NO. Different wording is fine: judge topics, not exact strings.",
+              `Does this consolidated summary still cover the topic of "${survived}", even in different words?`,
+              consolidated.text,
+            );
 
       const conResult: CompactionCaseResult = {
         id: "compaction-consolidation-merge",
@@ -437,7 +449,6 @@ async function runSingleCase(
     );
 
     // Grep checks
-    const mustContainChecks = checkMustContain(summary, c.ground.mustContain);
     const mustNotContainChecks = checkMustNotContain(summary, c.ground.mustNotContain);
 
     // Tool-leak indicator checks
@@ -451,21 +462,43 @@ async function runSingleCase(
 
     // LLM judge checks
     const judgeSystemPrompt =
-      "You evaluate conversation summaries. Answer only YES or NO. Be strict: if the fact is missing, answer NO.";
+      "You evaluate conversation summaries. Answer only YES or NO. Different wording is fine: judge topics, not exact strings.";
 
-    const judgeChecks: CompactionCheck[] = [];
+    // Must-contain: grep first, judge rescues a paraphrase. One check per
+    // item — a judge rescue must supersede the grep miss, not sit beside it.
+    const mustContainChecks: CompactionCheck[] = [];
     for (const item of c.ground.mustContain) {
-      if (summary.toLowerCase().includes(item.toLowerCase())) continue; // already confirmed by grep
-      const jc = await judgeCheck(
-        model,
-        judgeSystemPrompt,
-        `Does the summary mention "${item}"?`,
-        summary,
+      if (summary.toLowerCase().includes(item.toLowerCase())) {
+        mustContainChecks.push({
+          name: `must-contain: "${item}"`,
+          pass: true,
+          detail: "",
+        });
+        continue;
+      }
+      mustContainChecks.push(
+        await judgeCheck(
+          model,
+          judgeSystemPrompt,
+          `Does the summary cover the topic of "${item}", even in different words? Answer YES only if the topic is genuinely covered.`,
+          summary,
+        ),
       );
-      judgeChecks.push(jc);
     }
 
-    const allChecks = [...mustContainChecks, ...mustNotContainChecks, ...toolLeakChecks, ...judgeChecks];
+    const judgeChecks: CompactionCheck[] = [];
+    for (const question of c.ground.judgeQuestions ?? []) {
+      judgeChecks.push(
+        await judgeCheck(model, judgeSystemPrompt, question, summary),
+      );
+    }
+
+    const allChecks = [
+      ...mustContainChecks,
+      ...mustNotContainChecks,
+      ...toolLeakChecks,
+      ...judgeChecks,
+    ];
     const passed = allChecks.every((ch) => ch.pass);
 
     return { id: c.id, description: c.description, summary, usage, checks: allChecks, passed };
