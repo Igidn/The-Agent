@@ -216,6 +216,12 @@ export class WindowManager {
   // Hook handlers
   // ------------------------------------------------------------------
 
+  /**
+   * Produce a custom summary for the compaction epoch, or degrade to the
+   * SDK's default summary when the model is unavailable or the call fails.
+   * The summary is built from the dropped segment (messages to summarize)
+   * and the previous summary chain (possibly consolidated).
+   */
   private async _onBeforeCompact(
     event: SessionBeforeCompactEvent,
     ctx: ExtensionContext,
@@ -223,8 +229,6 @@ export class WindowManager {
     const preparation = event.preparation;
     this._pendingDropped = preparation.messagesToSummarize;
 
-    // A summarization call without a model can't run; let the SDK's own
-    // path produce its error instead of failing here.
     if (ctx.model === undefined) {
       this._pendingDropped = null;
       return;
@@ -261,7 +265,6 @@ export class WindowManager {
         },
       };
     } catch (err) {
-      // Degrade to the SDK's default summary rather than failing the epoch.
       this._pendingDropped = null;
       console.warn(
         "Compaction: custom summary failed; falling back to SDK default",
@@ -270,6 +273,11 @@ export class WindowManager {
     }
   }
 
+  /**
+   * Journal a completed compaction epoch to the sink and fire boundary
+   * callbacks. Consumes the pending dropped messages captured by
+   * {@link _onBeforeCompact}.
+   */
   private async _onCompacted(event: SessionCompactEvent): Promise<void> {
     const dropped = this._pendingDropped;
     this._pendingDropped = null;
@@ -321,6 +329,14 @@ export class WindowManager {
    * never push the window back toward the compaction threshold on
    * summary weight alone.
    */
+  /**
+   * Build the previousSummary input for the summarization call.
+   *
+   * When the accumulated summary chain exceeds the consolidation budget,
+   * the chain is merged into a single consolidated summary before being
+   * passed through, preventing summary weight from pushing the window
+   * back toward the compaction threshold.
+   */
   private async _chainPreviousSummary(
     event: SessionBeforeCompactEvent,
     ctx: ExtensionContext,
@@ -331,7 +347,6 @@ export class WindowManager {
       return undefined;
     }
 
-    // Dedupe: after a restart the chain is empty and prev is the last epoch.
     const candidates = [...new Set([...this._chain, prev])];
 
     if (this._estimateTokens(candidates) <= this._consolidationBudget) {
@@ -384,6 +399,10 @@ export class WindowManager {
   // Stats broadcast
   // ------------------------------------------------------------------
 
+  /**
+   * React to session lifecycle events: update the last compaction
+   * timestamp and broadcast window stats.
+   */
   private _onSessionEvent(event: AgentSessionEvent): void {
     if (event.type === "compaction_end" && !event.aborted && !event.willRetry) {
       this._lastCompactionAt = Date.now();
