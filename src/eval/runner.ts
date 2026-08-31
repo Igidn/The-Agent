@@ -4,6 +4,9 @@ import { runChecks } from "./checks.js";
 import { completeEvalTurn, type LlmTurnResult } from "./llm.js";
 import type { CaseResult, EvalCase, EvalRunResult } from "./types.js";
 
+export { runCompactionEval } from "./compaction.js";
+export type { CompactionCaseResult, CompactionEvalRunResult } from "./compaction.js";
+
 /** Per-case wall clock limit. A hung provider call must not stall the run. */
 const CASE_TIMEOUT_MS = 180_000;
 
