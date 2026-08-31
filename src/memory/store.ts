@@ -12,6 +12,27 @@ import type {
   ScoredItem,
 } from "./types.js";
 
+/** Columns returned by every item-fetching SQL query in this class. */
+interface RowShape {
+  uuid: string;
+  tier: string;
+  content: string;
+  tags: string;
+  entities: string | null;
+  importance: number;
+  sourceEntryId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// The published @types/better-sqlite3 (v9.6.0) is missing safeIntegers
+// from the constructor Options.  Add it via module augmentation.
+declare module "better-sqlite3" {
+  interface Options {
+    safeIntegers?: boolean;
+  }
+}
+
 /**
  * SQLite-backed memory store with vector search via sqlite-vec.
  *
@@ -36,7 +57,7 @@ export class SqliteMemoryStore implements MemoryStore {
     // The audit sink creates its parent dir on first write; match that so
     // the default ./data/memory.db works on a fresh checkout.
     mkdirSync(dirname(dbPath), { recursive: true });
-    this.db = new Database(dbPath, { safeIntegers: true } as any);
+    this.db = new Database(dbPath, { safeIntegers: true });
     loadVec(this.db);
     this.initSchema();
 
@@ -195,7 +216,7 @@ export class SqliteMemoryStore implements MemoryStore {
   async get(id: string): Promise<MemoryItem | null> {
     const row = this.stmtGet.get(id) as Record<string, unknown> | undefined;
     if (!row) return null;
-    return this.rowToItem(row as any);
+    return this.rowToItem(row as unknown as RowShape);
   }
 
   async list(
@@ -232,7 +253,7 @@ export class SqliteMemoryStore implements MemoryStore {
     const sql = `SELECT * FROM items ${where} ORDER BY id DESC LIMIT @limit OFFSET @offset`;
     const rows = this.db.prepare(sql).all(params) as Record<string, unknown>[];
 
-    return rows.map((r) => this.rowToItem(r as any));
+    return rows.map((r) => this.rowToItem(r as unknown as RowShape));
   }
 
   async delete(id: string): Promise<void> {
@@ -288,7 +309,7 @@ export class SqliteMemoryStore implements MemoryStore {
     return rows.map((r) => {
       const cosineDist = Number(r.distance);
       const cosine = 1 - cosineDist;
-      const item = this.rowToItem(r as any);
+      const item = this.rowToItem(r as unknown as RowShape);
       return {
         item,
         cosine,
