@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { SqliteMemoryStore } from './store.js';
-import type { EmbeddingProvider, MemoryItem, MemoryTag, MemoryTier } from './types.js';
+import type { EmbeddingProvider, MemoryItem } from './types.js';
 
 // ---------------------------------------------------------------------------
 // Fake embedding provider — deterministic, constant-dimension, no ML needed.

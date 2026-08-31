@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type { CaseResult, CheckResult, EvalRunResult } from './types.js';
+import type { CheckResult, EvalRunResult } from './types.js';
 
 function formatCheck(check: CheckResult): string {
   if (check.pass) return `  ok    ${check.name}`;

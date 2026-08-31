@@ -1,6 +1,5 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { once } from 'node:events';
 import { createServer, type Server } from 'node:http';
 
 import {

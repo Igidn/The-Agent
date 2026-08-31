@@ -19,20 +19,6 @@ interface Entry {
   timestamp: string;
 }
 
-/** Minimal session double for testing. */
-function fakeSession(messages: AgentMessage[], entries: Entry[] = []): AgentSession {
-  return {
-    messages,
-    sessionManager: {
-      getEntries: () => entries,
-    },
-    subscribe: (listener: (event: AgentSessionEvent) => void) => {
-      // Store listener so tests can drive events manually
-      return () => {};
-    },
-  } as unknown as AgentSession;
-}
-
 /** A controllable session that records the subscribe callback. */
 class ControllableSession {
   readonly messages: AgentMessage[];
@@ -305,8 +291,6 @@ test('bindSession can be called multiple times (re-subscribe)', async () => {
     [{ type: 'message', id: 's1', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
   );
   extractor.bindSession(session1.asSession());
-  const listener1 = session1.listener;
-
   const session2 = new ControllableSession(
     [],
     [{ type: 'message', id: 's2', parentId: null, timestamp: '2024-01-01T00:00:00Z' }],
@@ -432,7 +416,7 @@ test('re-bindSession after dispose works', async () => {
 test('constructor accepts real extractFns signature', () => {
   // Verify the constructor accepts the real extractFacts export shape
   const store = recordingStore();
-  const extract: ExtractFactsFn = async (msgs, model, models, signal) => {
+  const extract: ExtractFactsFn = async (_msgs, _model, _models, _signal) => {
     return [];
   };
   const model = cheapModel();

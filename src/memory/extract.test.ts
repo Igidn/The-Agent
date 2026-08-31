@@ -2,14 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Api, Model, Models, Usage, Message, AssistantMessage } from '@earendil-works/pi-ai';
 
-import type {
-  ExtractedFact,
-  ExtractionDecision,
-  MemoryItem,
-  MemoryStore,
-  MemoryTag,
-  ScoredItem,
-} from './types.js';
+import type { ExtractedFact, MemoryItem, MemoryStore, ScoredItem } from './types.js';
 import { extractFacts, decideUpsert, ingestFact } from './extract.js';
 
 // ---------------------------------------------------------------------------
@@ -268,7 +261,7 @@ test('extractFacts formats assistant and tool messages correctly', async () => {
     { content: 'User prefers short answers', tags: ['preference'], importance: 7 },
   ]);
 
-  const result = await extractFacts(messages as any, fakeModel(), fakeModels(canned));
+  const result = await extractFacts(messages as Message[], fakeModel(), fakeModels(canned));
   assert.equal(result.length, 1);
   assert.equal(result[0].content, 'User prefers short answers');
 });

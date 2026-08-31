@@ -1,6 +1,6 @@
 import type { MemoryConfig } from '../shared/types.js';
 import type { LiveWindow } from '../core/window/types.js';
-import type { MemoryStore, PrefetchResult, ScoredItem } from './types.js';
+import type { MemoryStore, PrefetchResult } from './types.js';
 
 /**
  * Build the query text from the current message and the previous assistant

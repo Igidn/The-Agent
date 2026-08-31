@@ -131,7 +131,9 @@ export async function consolidateProfile(
   try {
     reply = await models.complete(model, context, { signal });
   } catch (err) {
-    throw new Error(`consolidateProfile: provider call failed - ${(err as Error).message}`);
+    throw new Error(`consolidateProfile: provider call failed - ${(err as Error).message}`, {
+      cause: err,
+    });
   }
 
   if (reply.stopReason === 'error' || reply.stopReason === 'aborted') {

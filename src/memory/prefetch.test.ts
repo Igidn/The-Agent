@@ -148,11 +148,11 @@ test('prefetch: returns relevant items for a matching query', async () => {
 
 test('prefetch: excludes live items whose sourceEntryId is in the window', async () => {
   await withTempStore(async (store) => {
-    const liveItem = await insertItem(store, {
+    await insertItem(store, {
       content: 'user just said they love pizza',
       sourceEntryId: 'entry-live-1',
     });
-    const oldItem = await insertItem(store, {
+    await insertItem(store, {
       content: 'user mentioned they prefer coffee over tea',
       sourceEntryId: 'entry-old-1',
     });
@@ -275,7 +275,6 @@ test('prefetch: kills vibe-matching when no entity overlap and low cosine', asyn
 test('prefetch: returns null when nothing passes scoreThreshold', async () => {
   await withTempStore(async (store) => {
     // Insert something with low importance and old timestamp
-    const oldDate = new Date(Date.now() - 90 * 86_400_000).toISOString();
     await store.upsert({
       tier: 'episodic',
       content: 'completely irrelevant fact',

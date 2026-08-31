@@ -127,7 +127,9 @@ export async function consolidateSummary(
   try {
     reply = await models.complete(model, context, { signal });
   } catch (err) {
-    throw new Error(`consolidateSummary: provider call failed - ${(err as Error).message}`);
+    throw new Error(`consolidateSummary: provider call failed - ${(err as Error).message}`, {
+      cause: err,
+    });
   }
 
   if (reply.stopReason === 'error' || reply.stopReason === 'aborted') {

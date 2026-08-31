@@ -3,17 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import type {
-  Api,
-  Message,
-  AssistantMessage,
-  Model,
-  Models,
-  Usage,
-  TextContent,
-} from '@earendil-works/pi-ai';
+import type { Api, Model, Models, Usage } from '@earendil-works/pi-ai';
 
-import type { EmbeddingProvider, MemoryItem, MemoryStore, MemoryTag } from './types.js';
+import type { EmbeddingProvider, MemoryItem, MemoryTag } from './types.js';
 import { SqliteMemoryStore } from './store.js';
 import { consolidateProfile, renderProfileSection } from './consolidation.js';
 
@@ -78,8 +70,6 @@ function failingModels(): Models {
     },
   } as unknown as Models;
 }
-
-const UNUSED_MODEL = undefined as unknown as Model<Api>;
 
 function fakeModel(): Model<Api> {
   return { provider: 'openai', id: 'gpt-4o-mini' } as unknown as Model<Api>;

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { AgentMessage } from '@earendil-works/pi-agent-core';
 
-import type { EmbeddingProvider, MemoryItem, MemoryTag, MemoryStore } from './types.js';
+import type { MemoryItem, MemoryTag, MemoryStore } from './types.js';
 import type { CompactionEvent } from '../core/window/types.js';
 import {
   MemoryCompactionSink,
@@ -309,7 +309,7 @@ test('sink swallows ingest errors and continues with remaining facts', async () 
   const goodFact = { content: 'Good fact', tags: ['event'] as MemoryTag[], importance: 5 };
 
   let callCount = 0;
-  const ingestFact: IngestFactFn = async (fact) => {
+  const ingestFact: IngestFactFn = async (_fact) => {
     callCount++;
     if (callCount === 1) throw new Error('storage full');
     // Second call succeeds
@@ -334,7 +334,9 @@ test('sink swallows summary upsert errors and continues', async () => {
   const store = createStore();
   const originalUpsert = store.upsert;
   let upsertCount = 0;
-  const throwingUpsert: MemoryStore['upsert'] = async (input: any) => {
+  const throwingUpsert: MemoryStore['upsert'] = async (
+    input: Parameters<MemoryStore['upsert']>[0],
+  ) => {
     upsertCount++;
     if (upsertCount <= 2) throw new Error('disk full'); // First two summary writes fail
     return originalUpsert(input);

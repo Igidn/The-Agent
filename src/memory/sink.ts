@@ -1,13 +1,7 @@
 import type { AgentMessage } from '@earendil-works/pi-agent-core';
 
 import type { CompactionEvent, CompactionSink } from '../core/window/types.js';
-import type {
-  EmbeddingProvider,
-  ExtractedFact,
-  MemoryItem,
-  MemoryTag,
-  MemoryStore,
-} from './types.js';
+import type { EmbeddingProvider, ExtractedFact, MemoryTag, MemoryStore } from './types.js';
 
 /**
  * Bound extract function: takes messages and returns extracted facts.
