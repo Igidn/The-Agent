@@ -9,10 +9,6 @@ import type {
 } from "@earendil-works/pi-ai";
 import type { MemoryItem, MemoryStore, MemoryTag } from "./types.js";
 
-// ---------------------------------------------------------------------------
-// consolidateProfile
-// ---------------------------------------------------------------------------
-
 /**
  * System prompt for the profile consolidation pass.
  *
@@ -182,10 +178,6 @@ export async function consolidateProfile(
   return newItems;
 }
 
-// ---------------------------------------------------------------------------
-// Parsing helper
-// ---------------------------------------------------------------------------
-
 interface ProfileStatement {
   content: string;
   tags: MemoryTag[];
@@ -256,10 +248,6 @@ function parseTags(raw: unknown): MemoryTag[] {
       typeof t === "string" && VALID_TAGS.includes(t as MemoryTag),
   );
 }
-
-// ---------------------------------------------------------------------------
-// renderProfileSection
-// ---------------------------------------------------------------------------
 
 /**
  * Render a list of profile MemoryItems into a string block for the system

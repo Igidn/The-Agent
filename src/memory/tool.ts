@@ -4,10 +4,6 @@ import type { TextContent } from "@earendil-works/pi-ai";
 import type { MemoryConfig } from "../shared/types.js";
 import type { MemoryStore, ScoredItem } from "./types.js";
 
-// ---------------------------------------------------------------------------
-// Schema
-// ---------------------------------------------------------------------------
-
 const memorySearchParams = Type.Object({
   query: Type.String({ description: "Search query for memory recall" }),
   k: Type.Optional(
@@ -18,10 +14,6 @@ const memorySearchParams = Type.Object({
 });
 
 type MemorySearchParams = Static<typeof memorySearchParams>;
-
-// ---------------------------------------------------------------------------
-// Tool factory
-// ---------------------------------------------------------------------------
 
 /**
  * Create a `memory_search` tool that performs explicit memory recall.
@@ -81,10 +73,6 @@ export function createMemorySearchTool(
     },
   };
 }
-
-// ---------------------------------------------------------------------------
-// Formatting helpers
-// ---------------------------------------------------------------------------
 
 /**
  * Format scored search results into readable lines.

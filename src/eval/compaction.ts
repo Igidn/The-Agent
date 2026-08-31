@@ -20,10 +20,6 @@ import { builtinModels } from "@earendil-works/pi-ai/providers/all";
 import { compactionInstructions, consolidateSummary } from "../core/window/compaction.js";
 import { resolveEvalModel, completeEvalTurn, type EvalModelSpec } from "./llm.js";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 /** One rule checked against a summary. */
 export interface CompactionCheck {
   name: string;
@@ -73,10 +69,6 @@ interface CompactionEvalCase {
   previousSummary?: string;
 }
 
-// ---------------------------------------------------------------------------
-// Synthetic transcript builders
-// ---------------------------------------------------------------------------
-
 const ZERO_USAGE: Usage = {
   input: 0,
   output: 0,
@@ -117,10 +109,6 @@ function toolResultMsg(toolCallId: string, toolName: string, content: string): A
     timestamp: Date.now(),
   };
 }
-
-// ---------------------------------------------------------------------------
-// Test transcripts
-// ---------------------------------------------------------------------------
 
 const CASE_COMMITMENTS: CompactionEvalCase = {
   id: "compaction-commitments",
@@ -274,10 +262,6 @@ const CASE_CONSOLIDATION: CompactionEvalCase = {
   ],
 };
 
-// ---------------------------------------------------------------------------
-// Checks
-// ---------------------------------------------------------------------------
-
 /** Simple substring grep check. */
 function checkMustContain(summary: string, items: string[]): CompactionCheck[] {
   return items.map((item) => ({
@@ -338,10 +322,6 @@ async function judgeCheck(
   };
 }
 
-// ---------------------------------------------------------------------------
-// Run
-// ---------------------------------------------------------------------------
-
 /**
  * Run the full compaction-quality eval suite.
  *
@@ -375,7 +355,6 @@ export async function runCompactionEval(
     console.log(`${verdict}  ${c.id} — ${c.description}${result.error ? ` (${result.error})` : ""}`);
   }
 
-  // --- Consolidation-specific test ---
   // Run consolidateSummary on accumulated summaries from the first few cases
   // to verify the oldest commitment survives merging.
   const consolidationSummaries = results

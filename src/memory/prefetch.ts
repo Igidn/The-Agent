@@ -8,10 +8,6 @@ import type {
   ScoredItem,
 } from "./types.js";
 
-// ---------------------------------------------------------------------------
-// Prefetch read path
-// ---------------------------------------------------------------------------
-
 /**
  * Build the query text from the current message and the previous assistant
  * turn.  Concatenating both lets the vector search resolve anaphora like

@@ -9,10 +9,6 @@ import type {
   MemoryStore,
 } from "./types.js";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 /**
  * Bound extract function: takes messages and returns extracted facts.
  *
@@ -42,10 +38,6 @@ export type IngestFactFn = (
  * in main.ts; the sink just signals that compaction output landed.
  */
 export type ConsolidateFn = () => Promise<void>;
-
-// ---------------------------------------------------------------------------
-// Chunking
-// ---------------------------------------------------------------------------
 
 /**
  * Split text into chunks at sentence boundaries.
@@ -123,10 +115,6 @@ function findSentenceBoundary(text: string): number {
   return -1;
 }
 
-// ---------------------------------------------------------------------------
-// MemoryCompactionSink
-// ---------------------------------------------------------------------------
-
 /**
  * Compaction sink that re-extracts facts from dropped messages, persists
  * the rolling summary as episodic memory, and fires consolidation.
@@ -178,10 +166,6 @@ export class MemoryCompactionSink implements CompactionSink {
     await this._fireConsolidation();
   }
 
-  // ------------------------------------------------------------------
-  // Step 1 & 2: re-extract and ingest
-  // ------------------------------------------------------------------
-
   private async _processDroppedMessages(event: CompactionEvent): Promise<void> {
     if (event.droppedMessages.length === 0) return;
 
@@ -208,10 +192,6 @@ export class MemoryCompactionSink implements CompactionSink {
       );
     }
   }
-
-  // ------------------------------------------------------------------
-  // Step 3: persist rolling summary
-  // ------------------------------------------------------------------
 
   private async _persistRollingSummary(event: CompactionEvent): Promise<void> {
     // The SDK merges previousSummary into the new epoch summary (its update
@@ -243,10 +223,6 @@ export class MemoryCompactionSink implements CompactionSink {
       }
     }
   }
-
-  // ------------------------------------------------------------------
-  // Step 4: fire consolidation
-  // ------------------------------------------------------------------
 
   private async _fireConsolidation(): Promise<void> {
     try {
