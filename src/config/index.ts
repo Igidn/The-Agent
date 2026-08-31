@@ -31,6 +31,14 @@ export interface DaemonConfig {
     id: string;
     thinking?: ThinkingLevel;
   };
+  /**
+   * Cheap model used for background passes (summary consolidation,
+   * extraction, eval). Defaults to the main model when unset.
+   */
+  cheapModel?: {
+    provider: string;
+    id: string;
+  };
   /** Surface configuration. */
   surfaces: {
     discord?: {
@@ -130,6 +138,19 @@ export function loadConfig(): DaemonConfig {
     );
   }
 
+  const cheapModelProvider = process.env.CHEAP_MODEL_PROVIDER;
+  const cheapModelId = process.env.CHEAP_MODEL_ID;
+  let cheapModel: DaemonConfig["cheapModel"] = undefined;
+
+  if (cheapModelProvider && cheapModelId) {
+    cheapModel = { provider: cheapModelProvider, id: cheapModelId };
+  } else if (cheapModelProvider || cheapModelId) {
+    throw new Error(
+      "Both CHEAP_MODEL_PROVIDER and CHEAP_MODEL_ID must be set together " +
+        "to configure a cheap model.",
+    );
+  }
+
   const discordToken = process.env.DISCORD_TOKEN;
   const discordAllowedUsers = parseCommaList(process.env.DISCORD_ALLOWED_USERS);
 
@@ -147,6 +168,7 @@ export function loadConfig(): DaemonConfig {
     personaDir,
     compaction: { compactAtTokens, compactToTokens },
     model,
+    cheapModel,
     surfaces,
   };
 }

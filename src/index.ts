@@ -1,3 +1,14 @@
+export {
+  compactionInstructions,
+  consolidateSummary,
+  type ConsolidationResult,
+} from "./core/window/compaction.js";
+export type {
+  CompactionEvent,
+  CompactionSink,
+  LiveWindow,
+  WindowStats,
+} from "./core/window/types.js";
 export { loadConfig, type CompactionConfig, type DaemonConfig, type ThinkingLevel } from "./config/index.js";
 export { applyCompactionSettings, DEFAULT_AGENT_DIR, type CompactionPlan } from "./core/window/compaction-settings.js";
 export { wrapMessage, parseSurfaceFromOrigin, type SurfaceId, type WrappedMessage } from "./core/wrapper.js";
