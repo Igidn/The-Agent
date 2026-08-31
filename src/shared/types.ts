@@ -39,11 +39,40 @@ export interface DaemonConfig {
     provider: string;
     id: string;
   };
+  /** Memory configuration. */
+  memory?: MemoryConfig;
   /** Surface configuration. */
   surfaces: {
     discord?: {
       token?: string;
       allowedUsers?: string[];
     };
+  };
+}
+
+export interface MemoryConfig {
+  /** Path to the SQLite memory database. Default "./data/memory.db". */
+  dbPath: string;
+  /** Hugging Face model ID for local embeddings. Default "Xenova/bge-small-en-v1.5". */
+  embeddingModel: string;
+  /** Embedding dimensions. Must match the model. Default 384. */
+  embeddingDims: number;
+  /** Embedding provider settings. */
+  embedding: {
+    /** Which provider to use. Default "local". */
+    provider: "local" | "sidecar";
+    /** Sidecar URL, only used when provider is "sidecar". */
+    sidecarUrl?: string;
+  };
+  /** Prefetch read-path tuning. */
+  prefetch: {
+    /** Top-K candidates from vector search. Default 16. */
+    topK: number;
+    /** Max tokens for rendered prefetch context. Default 300. */
+    maxTokens: number;
+    /** Minimum cosine similarity to bypass tag/entity overlap check. */
+    strictCosine: number;
+    /** Minimum combined score after recency decay and importance weighting. */
+    scoreThreshold: number;
   };
 }

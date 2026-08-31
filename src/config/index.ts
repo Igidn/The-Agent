@@ -1,6 +1,6 @@
-import type { CompactionConfig, DaemonConfig, ThinkingLevel } from "../shared/types.js";
+import type { CompactionConfig, DaemonConfig, MemoryConfig, ThinkingLevel } from "../shared/types.js";
 
-export type { CompactionConfig, DaemonConfig, ThinkingLevel };
+export type { CompactionConfig, DaemonConfig, MemoryConfig, ThinkingLevel };
 
 const VALID_THINKING_LEVELS: readonly ThinkingLevel[] = [
   "off",
@@ -105,6 +105,58 @@ export function loadConfig(): DaemonConfig {
     );
   }
 
+  /* MEMORY */
+
+  const memoryDbPath = str(process.env.MEMORY_DB_PATH, "./data/memory.db");
+  const memoryEmbeddingModel = str(
+    process.env.MEMORY_EMBEDDING_MODEL,
+    "Xenova/bge-small-en-v1.5",
+  );
+  const memoryEmbeddingDims = num(process.env.MEMORY_EMBEDDING_DIMS, 384);
+  const memoryEmbeddingProvider = str(
+    process.env.MEMORY_EMBEDDING_PROVIDER,
+    "local",
+  ) as "local" | "sidecar";
+  const memorySidecarUrl =
+    process.env.MEMORY_SIDECAR_URL !== undefined &&
+    process.env.MEMORY_SIDECAR_URL.trim() !== ""
+      ? process.env.MEMORY_SIDECAR_URL.trim()
+      : undefined;
+  const memoryPrefetchTopK = num(process.env.MEMORY_PREFETCH_TOP_K, 16);
+  const memoryPrefetchMaxTokens = num(
+    process.env.MEMORY_PREFETCH_MAX_TOKENS,
+    300,
+  );
+  const memoryPrefetchStrictCosine = num(
+    process.env.MEMORY_PREFETCH_STRICT_COSINE,
+    0.7,
+  );
+  const memoryPrefetchScoreThreshold = num(
+    process.env.MEMORY_PREFETCH_SCORE_THRESHOLD,
+    0.5,
+  );
+
+  let memory: DaemonConfig["memory"] = undefined;
+  if (memoryEmbeddingDims >= 1) {
+    memory = {
+      dbPath: memoryDbPath,
+      embeddingModel: memoryEmbeddingModel,
+      embeddingDims: memoryEmbeddingDims,
+      embedding: {
+        provider: memoryEmbeddingProvider,
+        ...(memorySidecarUrl ? { sidecarUrl: memorySidecarUrl } : {}),
+      },
+      prefetch: {
+        topK: memoryPrefetchTopK,
+        maxTokens: memoryPrefetchMaxTokens,
+        strictCosine: memoryPrefetchStrictCosine,
+        scoreThreshold: memoryPrefetchScoreThreshold,
+      },
+    };
+  }
+
+  /* SURFACES */
+
   const discordToken = process.env.DISCORD_TOKEN;
   const discordAllowedUsers = parseCommaList(process.env.DISCORD_ALLOWED_USERS);
 
@@ -123,6 +175,7 @@ export function loadConfig(): DaemonConfig {
     compaction: { compactAtTokens, compactToTokens },
     model,
     cheapModel,
+    memory,
     surfaces,
   };
 }
