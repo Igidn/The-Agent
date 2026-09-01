@@ -7,6 +7,8 @@ import type { SurfaceId } from '../core/wrapper.js';
 import { WindowManager } from '../core/window/window-manager.js';
 import type { WindowStats } from '../core/window/types.js';
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
+import type { MemoryService } from '../memory/service.js';
+import { registerMemoryRoutes } from './memory-routes.js';
 
 /** A connected WebSocket client with its event subscription. */
 interface WsClient {
@@ -43,11 +45,14 @@ export class Gateway {
   private _sessionManager: SessionManager;
   private _eventBus: EventBus<AgentSessionEvent>;
   private _windowManager: WindowManager | null = null;
+  private _memory: MemoryService | null = null;
+  private _memoryRouteHandler: ((req: IncomingMessage, res: ServerResponse) => boolean) | null = null;
 
   constructor(
     sessionManager: SessionManager,
     messageQueue: MessageQueue,
     windowManager?: WindowManager,
+    memory?: MemoryService,
   ) {
     this._sessionManager = sessionManager;
     this._messageQueue = messageQueue;
@@ -55,6 +60,10 @@ export class Gateway {
     if (windowManager) {
       this._windowManager = windowManager;
       this._windowManager.setOnStatsUpdate((stats) => this._broadcastWindowStats(stats));
+    }
+    if (memory) {
+      this._memory = memory;
+      this._memoryRouteHandler = registerMemoryRoutes(memory);
     }
   }
 
@@ -111,6 +120,11 @@ export class Gateway {
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    // Try memory routes first; they return true when a route matched.
+    if (this._memoryRouteHandler?.(req, res)) {
       return;
     }
 
@@ -280,9 +294,14 @@ export class Gateway {
 
   private _setCorsHeaders(res: ServerResponse): void {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     res.setHeader('Access-Control-Max-Age', '86400');
+  }
+
+  /** Expose memory service for route handlers and tests. */
+  get memoryService(): MemoryService | null {
+    return this._memory;
   }
 
   private _normalizeSurface(raw: string): SurfaceId {
