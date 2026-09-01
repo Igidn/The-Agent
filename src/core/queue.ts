@@ -1,6 +1,8 @@
 import type { AgentSessionEvent } from '@earendil-works/pi-coding-agent';
 import { SessionManager } from './session.js';
 import { type SurfaceId, wrapMessage } from './wrapper.js';
+import type { WindowManager } from './window/window-manager.js';
+import type { MemoryService } from '../memory/service.js';
 
 export type QueueState = 'idle' | 'streaming';
 
@@ -72,6 +74,8 @@ export class MessageQueue {
 
   constructor(
     private sessionManager: SessionManager,
+    private memory?: MemoryService,
+    private windowManager?: WindowManager,
     debounceWindowMs = 5_000,
   ) {
     this.debounceWindowMs = debounceWindowMs;
@@ -222,7 +226,23 @@ export class MessageQueue {
    * (not when the model finishes streaming).
    */
   private async _dispatch(text: string, surface: SurfaceId): Promise<void> {
-    const wrapped = wrapMessage(text, surface);
+    let memoryContext: string | undefined;
+
+    if (this.memory && this.windowManager) {
+      try {
+        const prevAssistantTurn = this._getPrevAssistantTurn();
+        const result = await this.memory.prefetchForMessage(
+          text,
+          prevAssistantTurn,
+          this.windowManager.liveWindow,
+        );
+        memoryContext = result.context ?? undefined;
+      } catch (err) {
+        console.warn('Queue: memory prefetch failed', err);
+      }
+    }
+
+    const wrapped = wrapMessage(text, surface, memoryContext);
 
     if (this.settled) {
       // Rule 1: idle → prompt immediately.
@@ -239,6 +259,31 @@ export class MessageQueue {
       this._enqueuePending(text, surface);
     }
     // else: streaming but no active surface set → treat as idle (shouldn't happen).
+  }
+
+  /**
+   * Extract the text of the last assistant turn from the session.
+   *
+   * Returns null when the session has no assistant messages yet, so the
+   * prefetch pipeline degrades to a single-query search (no anaphora
+   * resolution).
+   */
+  private _getPrevAssistantTurn(): string | null {
+    const session = this.sessionManager.session;
+    if (!session) return null;
+    const messages = session.messages;
+    if (!messages || messages.length === 0) return null;
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i] as unknown as Record<string, unknown>;
+      if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+        const texts = (msg.content as Array<Record<string, unknown>>)
+          .filter((c) => c.type === 'text' && typeof c.text === 'string')
+          .map((c) => c.text as string);
+        if (texts.length > 0) return texts.join(' ');
+      }
+    }
+    return null;
   }
 
   private _onSessionEvent(event: AgentSessionEvent): void {

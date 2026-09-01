@@ -11,6 +11,7 @@ import type {
   AgentSession,
   AgentSessionEvent,
   PromptOptions,
+  ToolDefinition,
 } from '@earendil-works/pi-coding-agent';
 import { Charter } from './charter.js';
 import {
@@ -70,7 +71,7 @@ export class SessionManager {
    * 4. Creates the AgentSession with the resolved model and wires its
    *    event stream to the onEvent bus.
    */
-  async start(config: DaemonConfig): Promise<void> {
+  async start(config: DaemonConfig, extraTools?: ToolDefinition[]): Promise<void> {
     if (this._disposed) {
       throw new Error('SessionManager has been disposed');
     }
@@ -115,6 +116,7 @@ export class SessionManager {
       resourceLoader,
       cwd,
       tools: ['read', 'bash', 'edit', 'write'],
+      customTools: extraTools,
     });
 
     this.session = result.session;
