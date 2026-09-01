@@ -2,8 +2,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { MemoryService } from '../memory/service.js';
 import type { MemoryTier, MemoryTag } from '../memory/types.js';
 
-// ── Route matching ─────────────────────────────────────────────────
-
 interface Route {
   method: string;
   pattern: RegExp;
@@ -22,10 +20,26 @@ export function registerMemoryRoutes(
 ): (req: IncomingMessage, res: ServerResponse) => boolean {
   const routes: Route[] = [
     { method: 'GET', pattern: /^\/api\/memory$/, handler: (req, res) => handleList(req, res, memory) },
-    { method: 'GET', pattern: /^\/api\/memory\/([^/]+)$/, handler: (req, res, id) => handleGet(req, res, memory, id) },
+    { method: 'GET', pattern: /^\/api\/memory\/([^/]+)$/, handler: async (req, res, id) => {
+      const item = await memory.store.get(id);
+      if (!item) {
+        jsonError(res, 404, 'Memory item not found');
+        return;
+      }
+      jsonOk(res, { item });
+    } },
     { method: 'PUT', pattern: /^\/api\/memory\/([^/]+)$/, handler: (req, res, id) => handleUpdate(req, res, memory, id) },
     { method: 'POST', pattern: /^\/api\/memory$/, handler: (req, res) => handleCreate(req, res, memory) },
-    { method: 'DELETE', pattern: /^\/api\/memory\/([^/]+)$/, handler: (req, res, id) => handleDelete(req, res, memory, id) },
+    { method: 'DELETE', pattern: /^\/api\/memory\/([^/]+)$/, handler: async (req, res, id) => {
+      const existing = await memory.store.get(id);
+      if (!existing) {
+        jsonError(res, 404, 'Memory item not found');
+        return;
+      }
+      await memory.deleteItem(id);
+      res.writeHead(204);
+      res.end();
+    } },
     { method: 'POST', pattern: /^\/api\/memory\/search$/, handler: (req, res) => handleSearch(req, res, memory) },
   ];
 
@@ -50,8 +64,6 @@ export function registerMemoryRoutes(
     return false;
   };
 }
-
-// ── Handlers ────────────────────────────────────────────────────────
 
 /** GET /api/memory — list items with optional tier, tags, pagination. */
 async function handleList(
@@ -85,21 +97,6 @@ async function handleList(
   });
 
   jsonOk(res, { items });
-}
-
-/** GET /api/memory/:id — fetch a single item. */
-async function handleGet(
-  _req: IncomingMessage,
-  res: ServerResponse,
-  memory: MemoryService,
-  id: string,
-): Promise<void> {
-  const item = await memory.store.get(id);
-  if (!item) {
-    jsonError(res, 404, 'Memory item not found');
-    return;
-  }
-  jsonOk(res, { item });
 }
 
 /** PUT /api/memory/:id — update an existing item. */
@@ -174,24 +171,6 @@ async function handleCreate(
   jsonOk(res, { item }, 201);
 }
 
-/** DELETE /api/memory/:id — remove an item. */
-async function handleDelete(
-  _req: IncomingMessage,
-  res: ServerResponse,
-  memory: MemoryService,
-  id: string,
-): Promise<void> {
-  const existing = await memory.store.get(id);
-  if (!existing) {
-    jsonError(res, 404, 'Memory item not found');
-    return;
-  }
-
-  await memory.deleteItem(id);
-  res.writeHead(204);
-  res.end();
-}
-
 /** POST /api/memory/search — semantic search. */
 async function handleSearch(
   req: IncomingMessage,
@@ -217,8 +196,6 @@ async function handleSearch(
 
   jsonOk(res, { results });
 }
-
-// ── Helpers ─────────────────────────────────────────────────────────
 
 function isValidTier(value: unknown): value is MemoryTier {
   return value === 'profile' || value === 'episodic';

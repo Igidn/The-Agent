@@ -10,5 +10,8 @@ Rule:
 - Use Conventional commit titles.
 - Comments describe how a thing is used, Do not annotate every line of behavior.
 
+- A file should not be longer than 500 lines of code.
+- Halstead Difficulty should be under 80, Make sure it's easy to read/maintain.
+
 Important:
 - Security is really important, but should not be over indexed on, especially for dev mode only feature.
