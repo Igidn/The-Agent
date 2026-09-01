@@ -46,7 +46,8 @@ export class Gateway {
   private _eventBus: EventBus<AgentSessionEvent>;
   private _windowManager: WindowManager | null = null;
   private _memory: MemoryService | null = null;
-  private _memoryRouteHandler: ((req: IncomingMessage, res: ServerResponse) => boolean) | null = null;
+  private _memoryRouteHandler: ((req: IncomingMessage, res: ServerResponse) => boolean) | null =
+    null;
 
   constructor(
     sessionManager: SessionManager,

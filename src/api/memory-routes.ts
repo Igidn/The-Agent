@@ -19,28 +19,52 @@ export function registerMemoryRoutes(
   memory: MemoryService,
 ): (req: IncomingMessage, res: ServerResponse) => boolean {
   const routes: Route[] = [
-    { method: 'GET', pattern: /^\/api\/memory$/, handler: (req, res) => handleList(req, res, memory) },
-    { method: 'GET', pattern: /^\/api\/memory\/([^/]+)$/, handler: async (req, res, id) => {
-      const item = await memory.store.get(id);
-      if (!item) {
-        jsonError(res, 404, 'Memory item not found');
-        return;
-      }
-      jsonOk(res, { item });
-    } },
-    { method: 'PUT', pattern: /^\/api\/memory\/([^/]+)$/, handler: (req, res, id) => handleUpdate(req, res, memory, id) },
-    { method: 'POST', pattern: /^\/api\/memory$/, handler: (req, res) => handleCreate(req, res, memory) },
-    { method: 'DELETE', pattern: /^\/api\/memory\/([^/]+)$/, handler: async (req, res, id) => {
-      const existing = await memory.store.get(id);
-      if (!existing) {
-        jsonError(res, 404, 'Memory item not found');
-        return;
-      }
-      await memory.deleteItem(id);
-      res.writeHead(204);
-      res.end();
-    } },
-    { method: 'POST', pattern: /^\/api\/memory\/search$/, handler: (req, res) => handleSearch(req, res, memory) },
+    {
+      method: 'GET',
+      pattern: /^\/api\/memory$/,
+      handler: (req, res) => handleList(req, res, memory),
+    },
+    {
+      method: 'GET',
+      pattern: /^\/api\/memory\/([^/]+)$/,
+      handler: async (req, res, id) => {
+        const item = await memory.store.get(id);
+        if (!item) {
+          jsonError(res, 404, 'Memory item not found');
+          return;
+        }
+        jsonOk(res, { item });
+      },
+    },
+    {
+      method: 'PUT',
+      pattern: /^\/api\/memory\/([^/]+)$/,
+      handler: (req, res, id) => handleUpdate(req, res, memory, id),
+    },
+    {
+      method: 'POST',
+      pattern: /^\/api\/memory$/,
+      handler: (req, res) => handleCreate(req, res, memory),
+    },
+    {
+      method: 'DELETE',
+      pattern: /^\/api\/memory\/([^/]+)$/,
+      handler: async (req, res, id) => {
+        const existing = await memory.store.get(id);
+        if (!existing) {
+          jsonError(res, 404, 'Memory item not found');
+          return;
+        }
+        await memory.deleteItem(id);
+        res.writeHead(204);
+        res.end();
+      },
+    },
+    {
+      method: 'POST',
+      pattern: /^\/api\/memory\/search$/,
+      handler: (req, res) => handleSearch(req, res, memory),
+    },
   ];
 
   return function matchRoute(req: IncomingMessage, res: ServerResponse): boolean {
@@ -52,12 +76,10 @@ export function registerMemoryRoutes(
       const match = route.pattern.exec(url);
       if (match) {
         const params = match.slice(1);
-        route
-          .handler(req, res, ...params)
-          .catch((err) => {
-            console.error('Memory route error:', err);
-            jsonError(res, 500, 'Internal server error');
-          });
+        route.handler(req, res, ...params).catch((err) => {
+          console.error('Memory route error:', err);
+          jsonError(res, 500, 'Internal server error');
+        });
         return true;
       }
     }
@@ -78,9 +100,11 @@ async function handleList(
 
   const tagsParam = urlObj.searchParams.get('tags');
   const tags: MemoryTag[] | undefined = tagsParam
-    ? (tagsParam.split(',').filter((t): t is MemoryTag =>
-        ['preference', 'person', 'event', 'project', 'correction', 'summary'].includes(t),
-      ))
+    ? tagsParam
+        .split(',')
+        .filter((t): t is MemoryTag =>
+          ['preference', 'person', 'event', 'project', 'correction', 'summary'].includes(t),
+        )
     : undefined;
 
   const limitRaw = urlObj.searchParams.get('limit');
@@ -127,12 +151,11 @@ async function handleUpdate(
     tier: isValidTier(parsed.tier) ? parsed.tier : existing.tier,
     tags: Array.isArray(parsed.tags) ? (parsed.tags as MemoryTag[]) : existing.tags,
     importance: typeof parsed.importance === 'number' ? parsed.importance : existing.importance,
-    sourceEntryId: parsed.sourceEntryId !== undefined
-      ? (parsed.sourceEntryId as string | null)
-      : existing.sourceEntryId,
-    entities: parsed.entities !== undefined
-      ? (parsed.entities as string[])
-      : existing.entities,
+    sourceEntryId:
+      parsed.sourceEntryId !== undefined
+        ? (parsed.sourceEntryId as string | null)
+        : existing.sourceEntryId,
+    entities: parsed.entities !== undefined ? (parsed.entities as string[]) : existing.entities,
     id,
   });
 
