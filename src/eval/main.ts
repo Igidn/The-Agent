@@ -1,14 +1,20 @@
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 import { loadConfig } from '../config/index.js';
+import type { MemoryConfig } from '../shared/types.js';
 import { Charter } from '../core/charter.js';
+import { LocalEmbeddingProvider } from '../memory/embeddings.js';
+import { SqliteMemoryStore } from '../memory/store.js';
 import { printReport, writeRunArtifacts } from './report.js';
 import { EVAL_CASES } from './cases.js';
 import { resolveEvalModel, type EvalModelSpec } from './llm.js';
 import { runEval } from './runner.js';
 import { runCompactionEval } from './compaction.js';
+import { hasSeedItems, runPrefetchForCase } from './memory-seeder.js';
 
 /** Default eval model. Changing the default without re-running eval is a regression. */
 const DEFAULT_EVAL_MODEL: EvalModelSpec = { provider: 'openrouter', id: 'z-ai/glm-5.3-flash' };
@@ -23,6 +29,11 @@ Flags:
   --compaction            Run the compaction-quality suite (summary survival,
                           tool-spam drop, memory-context strip, consolidation)
                           instead of the persona cases. No persona needed.
+  --memory                Run the persona eval with the real memory service
+                          (embeddings + sqlite-vec + prefetch) instead of
+                          hardcoded memory contexts. Seeds the store with
+                          items matching each memory-bait case and runs the
+                          real prefetch pipeline.
   --out <dir>             Where run artifacts are written. Default: .eval/runs.
   --concurrency <n>       Cases in flight at once. Default: 4.`;
 
@@ -33,7 +44,8 @@ Flags:
  */
 export async function evalMain(argv: readonly string[]): Promise<number> {
   const compactionRequested = argv.includes('--compaction');
-  const args = argv.filter((a) => a !== '--compaction');
+  const memoryIntegrated = argv.includes('--memory');
+  const args = argv.filter((a) => a !== '--compaction' && a !== '--memory');
 
   const flags = new Map<string, string>();
   for (let i = 0; i < args.length; i++) {
@@ -114,8 +126,10 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
   const filter = flags.get('--filter')?.toLowerCase();
   const selected =
     filter === undefined
-      ? EVAL_CASES
-      : EVAL_CASES.filter((c) => c.id.includes(filter) || c.category.includes(filter));
+      ? EVAL_CASES.map((c) => ({ ...c })) // Clone so we can safely mutate.
+      : EVAL_CASES.filter((c) => c.id.includes(filter) || c.category.includes(filter)).map((c) => ({
+          ...c,
+        }));
   if (selected.length === 0) {
     console.error(`No cases match --filter "${filter}"`);
     return 2;
@@ -132,6 +146,48 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
     return undefined;
   });
   if (model === undefined) return 2;
+
+  // ── Memory integration ──────────────────────────────────────────────
+  let memoryStore: SqliteMemoryStore | undefined;
+  let memoryEmbeddings: LocalEmbeddingProvider | undefined;
+  let memoryDir: string | undefined;
+
+  if (memoryIntegrated) {
+    console.log('Memory integration enabled: using real embeddings + prefetch pipeline');
+    memoryDir = await mkdtemp(join(tmpdir(), 'eval-memory-'));
+    const dbPath = join(memoryDir, 'eval.db');
+    memoryEmbeddings = new LocalEmbeddingProvider(
+      config.memory?.embeddingModel ?? 'Xenova/bge-small-en-v1.5',
+      config.memory?.embeddingDims ?? 384,
+    );
+    memoryStore = new SqliteMemoryStore(dbPath, memoryEmbeddings);
+
+    // Seed the store with items that match the original hardcoded
+    // memoryContext strings, then run real prefetch for each case.
+    const prefetchCfg: MemoryConfig['prefetch'] = {
+      topK: config.memory?.prefetch?.topK ?? 16,
+      maxTokens: config.memory?.prefetch?.maxTokens ?? 300,
+      strictCosine: config.memory?.prefetch?.strictCosine ?? 0.6,
+      scoreThreshold: config.memory?.prefetch?.scoreThreshold ?? 0.4,
+    };
+
+    for (const c of selected) {
+      if (!hasSeedItems(c.id)) continue;
+
+      try {
+        const context = await runPrefetchForCase(memoryStore, prefetchCfg, c);
+        if (context !== null) {
+          c.memoryContext = context;
+          console.log(`  memory: ${c.id} prefetch returned ${context.length} chars`);
+        } else {
+          c.memoryContext = undefined;
+          console.log(`  memory: ${c.id} prefetch returned null`);
+        }
+      } catch (err) {
+        console.warn(`  memory: ${c.id} prefetch failed`, err);
+      }
+    }
+  }
 
   console.log(`Evaluating ${selected.length} cases against ${modelSpec.provider}/${modelSpec.id}`);
 
@@ -150,7 +206,17 @@ export async function evalMain(argv: readonly string[]): Promise<number> {
   const runDir = await writeRunArtifacts(run, outDir);
   console.log(`Transcripts written to ${runDir}`);
 
-  return run.results.every((r) => r.passed) ? 0 : 1;
+  const exitCode = run.results.every((r) => r.passed) ? 0 : 1;
+
+  // Cleanup memory resources.
+  if (memoryStore !== undefined) {
+    await memoryStore.close();
+  }
+  if (memoryDir !== undefined) {
+    await rm(memoryDir, { recursive: true, force: true }).catch(() => {});
+  }
+
+  return exitCode;
 }
 
 const isEntryPoint =
