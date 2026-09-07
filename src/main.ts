@@ -85,10 +85,8 @@ export async function main(): Promise<void> {
   }
 
   // 6. Bound functions for the compaction sink
-  const boundExtractFacts = (
-    msgs: Parameters<typeof extractFacts>[0],
-    signal?: AbortSignal,
-  ) => extractFacts(msgs, cheapModel, models, signal);
+  const boundExtractFacts = (msgs: Parameters<typeof extractFacts>[0], signal?: AbortSignal) =>
+    extractFacts(msgs, cheapModel, models, signal);
 
   const boundIngestFact = (fact: Parameters<typeof ingestFact>[1], sourceEntryId: string | null) =>
     ingestFact(store, fact, sourceEntryId);
